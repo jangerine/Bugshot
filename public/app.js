@@ -278,3 +278,24 @@ modalClose.addEventListener('click', () => {
     lobbyScreen.classList.remove('hidden');
   }
 });
+// 🎬 장전 애니메이션 연출
+function triggerReloadEffect(liveCount, blankCount) {
+  // 총기 그래픽 젖힘/움직임 애니메이션
+  shotgunEl.classList.remove('reload-anim');
+  void shotgunEl.offsetWidth; // Reflow
+  shotgunEl.classList.add('reload-anim');
+
+  // 화면 중앙에 장전 텍스트 팝업 및 화면 번쩍임
+  statusTextEl.textContent = `🔄 [재장전] 실탄 ${liveCount}발 / 공포탄 ${blankCount}발이 장전되었습니다!`;
+  appEl.classList.add('flash-yellow');
+
+  setTimeout(() => {
+    shotgunEl.classList.remove('reload-anim');
+    appEl.classList.remove('flash-yellow');
+  }, 600);
+}
+
+// 서버에서 재장전 신호가 오면 연출 실행
+socket.on('reloadBullets', (data) => {
+  triggerReloadEffect(data.liveBullets, data.blankBullets);
+});
