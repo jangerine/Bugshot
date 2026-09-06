@@ -354,3 +354,23 @@ document.getElementById("btn-shoot-self").addEventListener("click", () => {
   if (isAiMode) shootInAi(true);
   else socket.emit("shoot", { targetSelf: true });
 });
+// 시각 효과 연출 함수
+function triggerEffect(isLive) {
+  const app = document.getElementById("app");
+  const shotgun = document.querySelector(".shotgun-icon");
+
+  // 1. 총기 반동 효과
+  if (shotgun) {
+    shotgun.classList.add("recoil");
+    setTimeout(() => shotgun.classList.remove("recoil"), 150);
+  }
+
+  // 2. 화면 효과 (실탄: 강한 진동 + 빨간 플래시 / 공포탄: 하얀 플래시)
+  if (isLive) {
+    app.classList.add("shake", "flash-red");
+    setTimeout(() => app.classList.remove("shake", "flash-red"), 300);
+  } else {
+    app.classList.add("flash-white");
+    setTimeout(() => app.classList.remove("flash-white"), 150);
+  }
+}
