@@ -4,237 +4,283 @@ const { Server } = require('socket.io');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server, { cors: { origin: "*" } });
+const io = new Server(server);
 
 app.use(express.static('public'));
 
+// 게임 방 및 AI 게임 상태 저장소
 const rooms = {};
 
-// 9종 전체 아이템 목록
-const ITEMS = [
-  "MAGNIFIER",  // 돋보기
-  "CIGARETTE",  // 담배
-  "SAW",        // 톱
-  "HANDCUFFS",  // 수갑
-  "BEER",       // 맥주
-  "PHONE",      // 일회용 전화기
-  "INVERTER",   // 변환기
-  "ADRENALINE", // 아드레날린
-  "MEDICINE"    // 만료된 약
-];
+// 아이템 목록
+const ITEMS = ['cigarette', 'beer', 'magnifier', 'saw', 'handcuffs', 'medicine', 'inverter', 'phone', 'adrenaline'];
 
-function getRandomItem() {
-  return ITEMS[Math.floor(Math.random() * ITEMS.length)];
+// 무작위 아이템 지급 헬퍼
+function getRandomItems(count = 2) {
+  const result = [];
+  for (let i = 0; i < count; i++) {
+    result.push(ITEMS[Math.floor(Math.random() * ITEMS.length)]);
+  }
+  return result;
 }
 
-function startNewRound(room) {
-  const live = Math.floor(Math.random() * 3) + 2; // 2~4개
-  const blank = Math.floor(Math.random() * 3) + 2; // 2~4개
+// 총알 덱 생성 (실탄 1~4, 공포탄 1~4)
+function generateBullets() {
+  const live = Math.floor(Math.random() * 3) + 2; // 2~4발
+  const blank = Math.floor(Math.random() * 3) + 1; // 1~3발
+  const bullets = [];
+  for (let i = 0; i < live; i++) bullets.push('live');
+  for (let i = 0; i < blank; i++) bullets.push('blank');
   
-  let bullets = [];
-  for (let i = 0; i < live; i++) bullets.push(true);
-  for (let i = 0; i < blank; i++) bullets.push(false);
-  bullets.sort(() => Math.random() - 0.5);
-
-  room.bullets = bullets;
-  room.sawActive = false;
-  room.handcuffsActive = false;
-
-  Object.keys(room.players).forEach(id => {
-    const p = room.players[id];
-    // 최대 8개까지 아이템 보유 가능
-    p.items = [...p.items, getRandomItem(), getRandomItem()].slice(0, 8);
-  });
-
-  room.logs = `새 탄환 장전! (실탄 ${live}개, 공포탄 ${blank}개)`;
+  // 셔플
+  for (let i = bullets.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [bullets[i], bullets[j]] = [bullets[j], bullets[i]];
+  }
+  
+  return { bullets, liveCount: live, blankCount: blank };
 }
 
 io.on('connection', (socket) => {
-  socket.on('joinRoom', ({ name, roomCode }) => {
-    socket.join(roomCode);
-    socket.roomCode = roomCode;
+  console.log(`플레이어 접속: ${socket.id}`);
 
-    if (!rooms[roomCode]) {
-      rooms[roomCode] = {
+  // 1. AI전 시작
+  socket.on('startVsAI', ({ name }) => {
+    const roomId = `ai_${socket.id}`;
+    const bulletData = generateBullets();
+
+    rooms[roomId] = {
+      isAI: true,
+      players: {
+        [socket.id]: { name: name || '플레이어', hp: 4, items: getRandomItems(2) },
+        'ai_dealer': { name: '딜러 (AI)', hp: 4, items: getRandomItems(2) }
+      },
+      turn: socket.id,
+      bullets: bulletData.bullets,
+      liveCount: bulletData.liveCount,
+      blankCount: bulletData.blankCount,
+      isSawActive: false,
+      isOpponentHandcuffed: false
+    };
+
+    socket.join(roomId);
+    socket.roomId = roomId;
+
+    socket.emit('gameStart', { roomId });
+    sendGameState(roomId);
+  });
+
+  // 2. 멀티플레이 방 입장
+  socket.on('joinRoom', ({ name, room }) => {
+    const roomId = room || 'default';
+    socket.join(roomId);
+    socket.roomId = roomId;
+
+    if (!rooms[roomId]) {
+      rooms[roomId] = {
+        isAI: false,
         players: {},
-        turnOrder: [],
-        currentTurnIndex: 0,
+        playerOrder: [],
+        turn: null,
         bullets: [],
-        sawActive: false,
-        handcuffsActive: false,
-        logs: "상대방을 기다리는 중..."
+        liveCount: 0,
+        blankCount: 0,
+        isSawActive: false,
+        isOpponentHandcuffed: false
       };
     }
 
-    const room = rooms[roomCode];
-
-    if (Object.keys(room.players).length >= 2) {
-      socket.emit('errorMsg', '방이 가득 찼습니다.');
-      return;
+    const roomData = rooms[roomId];
+    roomData.players[socket.id] = { name: name || '플레이어', hp: 4, items: getRandomItems(2) };
+    if (!roomData.playerOrder.includes(socket.id)) {
+      roomData.playerOrder.push(socket.id);
     }
 
-    room.players[socket.id] = {
-      id: socket.id,
-      name: name || '플레이어',
-      hp: 4,
-      items: []
-    };
-    room.turnOrder.push(socket.id);
+    // 2명 모이면 게임 시작
+    if (roomData.playerOrder.length === 2) {
+      const bulletData = generateBullets();
+      roomData.bullets = bulletData.bullets;
+      roomData.liveCount = bulletData.liveCount;
+      roomData.blankCount = bulletData.blankCount;
+      roomData.turn = roomData.playerOrder[0];
 
-    if (room.turnOrder.length === 2) {
-      startNewRound(room);
+      io.to(roomId).emit('gameStart', { roomId });
+      sendGameState(roomId);
+    } else {
+      socket.emit('itemResult', { title: '대기 중', message: '다른 플레이어의 입장을 기다리고 있습니다...' });
     }
-
-    io.to(roomCode).emit('updateState', getPublicState(room));
   });
 
-  // 아이템 사용 처리
-  socket.on('useItem', ({ itemIndex, targetItemIndex }) => {
-    const room = rooms[socket.roomCode];
-    if (!room) return;
-    const player = room.players[socket.id];
-    const oppId = room.turnOrder.find(id => id !== socket.id);
-    const opponent = room.players[oppId];
+  // 상태 전송 헬퍼
+  function sendGameState(roomId) {
+    const gameState = rooms[roomId];
+    if (!gameState) return;
 
-    if (room.turnOrder[room.currentTurnIndex] !== socket.id) return;
+    if (gameState.isAI) {
+      const player = gameState.players[socket.id];
+      const ai = gameState.players['ai_dealer'];
 
-    let item = player.items[itemIndex];
-
-    // 아드레날린 사용 시 상대 아이템 강탈
-    if (item === "ADRENALINE") {
-      if (!opponent.items[targetItemIndex]) return;
-      item = opponent.items[targetItemIndex];
-      opponent.items.splice(targetItemIndex, 1); // 상대 아이템 제거
-      player.items.splice(itemIndex, 1); // 본인 아드레날린 제거
-      room.logs = `${player.name}이(가) 아드레날린으로 상대의 아이템을 훔쳐 사용했습니다!`;
+      socket.emit('updateGameState', {
+        turn: gameState.turn,
+        isOpponentHandcuffed: gameState.isOpponentHandcuffed,
+        myName: player.name,
+        myHp: player.hp,
+        myItems: player.items,
+        oppName: ai.name,
+        oppHp: ai.hp,
+        oppItems: ai.items,
+        liveBullets: gameState.liveCount,
+        blankBullets: gameState.blankCount
+      });
     } else {
-      player.items.splice(itemIndex, 1);
+      // 멀티플레이어 각각 시점에 맞게 전송
+      gameState.playerOrder.forEach((id) => {
+        const oppId = gameState.playerOrder.find(pId => pId !== id);
+        const me = gameState.players[id];
+        const opp = gameState.players[oppId] || { name: '대기 중', hp: 0, items: [] };
+
+        io.to(id).emit('updateGameState', {
+          turn: gameState.turn,
+          isOpponentHandcuffed: gameState.isOpponentHandcuffed,
+          myName: me.name,
+          myHp: me.hp,
+          myItems: me.items,
+          oppName: opp.name,
+          oppHp: opp.hp,
+          oppItems: opp.items,
+          liveBullets: gameState.liveCount,
+          blankBullets: gameState.blankCount
+        });
+      });
+    }
+  }
+
+  // 3. 사격 처리
+  socket.on('shoot', ({ target }) => {
+    const roomId = socket.roomId;
+    const game = rooms[roomId];
+    if (!game || game.turn !== socket.id) return;
+
+    const bullet = game.bullets.shift();
+    const isLive = bullet === 'live';
+    const damage = game.isSawActive && isLive ? 2 : 1;
+    game.isSawActive = false; // 톱 효과 리셋
+
+    if (isLive) game.liveCount--;
+    else game.blankCount--;
+
+    // 피격 대상 계산
+    let targetId = target === 'opponent' ? (game.isAI ? 'ai_dealer' : game.playerOrder.find(id => id !== socket.id)) : socket.id;
+
+    if (isLive) {
+      game.players[targetId].hp = Math.max(0, game.players[targetId].hp - damage);
     }
 
-    // 아이템별 효과 실행
-    if (item === "MAGNIFIER") { // 돋보기
-      const nextBullet = room.bullets[room.bullets.length - 1] ? "실탄 🔴" : "공포탄 ⚪";
-      socket.emit('secretInfo', `[돋보기] 다음 탄환은 ${nextBullet} 입니다!`);
-      room.logs = `${player.name}이(가) 돋보기를 사용했습니다.`;
-    } 
-    else if (item === "CIGARETTE") { // 담배
-      player.hp = Math.min(4, player.hp + 1);
-      room.logs = `${player.name}이(가) 담배를 피워 체력을 1 회복했습니다.`;
-    } 
-    else if (item === "SAW") { // 톱
-      room.sawActive = true;
-      room.logs = `${player.name}이(가) 톱으로 샷건을 잘라 데미지를 2배로 만듭니다!`;
-    } 
-    else if (item === "HANDCUFFS") { // 수갑
-      room.handcuffsActive = true;
-      room.logs = `${player.name}이(가) 수갑을 채워 상대의 다음 턴을 넘깁니다!`;
-    } 
-    else if (item === "BEER") { // 맥주
-      const popped = room.bullets.pop();
-      const typeStr = popped ? "실탄 🔴" : "공포탄 ⚪";
-      room.logs = `${player.name}이(가) 맥주를 마셔 탄환 하나를 배출했습니다! (배출된 탄: ${typeStr})`;
-    } 
-    else if (item === "PHONE") { // 전화기
-      if (room.bullets.length <= 1) {
-        socket.emit('secretInfo', '[전화기] 남은 탄환이 너무 적어 힌트를 얻을 수 없습니다.');
+    io.to(socket.id).emit('shotResult', { isLive, target });
+
+    // 턴 교체 로직 (자신에게 공포탄 쐈을 땐 턴 유지)
+    if (!(target === 'self' && !isLive)) {
+      if (game.isOpponentHandcuffed) {
+        game.isOpponentHandcuffed = false; // 수갑 풀림
       } else {
-        const randIndex = Math.floor(Math.random() * (room.bullets.length - 1)); // 현재 탄 제외한 탄환 중 랜덤
-        const numFromBack = room.bullets.length - randIndex; // 뒤에서부터 몇 번째인지
-        const bulletType = room.bullets[randIndex] ? "실탄 🔴" : "공포탄 ⚪";
-        socket.emit('secretInfo', `[전화기] 귓속말: ${numFromBack}번째 탄환은 ${bulletType} 입니다.`);
-      }
-      room.logs = `${player.name}이(가) 전화기로 힌트를 확인했습니다.`;
-    } 
-    else if (item === "INVERTER") { // 변환기
-      if (room.bullets.length > 0) {
-        const lastIdx = room.bullets.length - 1;
-        room.bullets[lastIdx] = !room.bullets[lastIdx]; // 반전
-      }
-      room.logs = `${player.name}이(가) 변환기를 사용해 다음 탄환의 종류를 반대로 바꿨습니다!`;
-    } 
-    else if (item === "MEDICINE") { // 만료된 약
-      const success = Math.random() < 0.4; // 40% 확률 성공
-      if (success) {
-        player.hp = Math.min(4, player.hp + 2);
-        room.logs = `${player.name}이(가) 약을 먹고 체력을 2 회복했습니다!`;
-      } else {
-        player.hp = Math.max(0, player.hp - 1);
-        room.logs = `${player.name}이(가) 부작용으로 체력 1을 잃었습니다...`;
+        game.turn = game.isAI ? (game.turn === socket.id ? 'ai_dealer' : socket.id) : game.playerOrder.find(id => id !== socket.id);
       }
     }
 
-    // 탄환 없으면 라운드 재시작
-    if (room.bullets.length === 0) {
-      startNewRound(room);
+    // 총알 다 떨어졌으면 재장전
+    if (game.bullets.length === 0) {
+      const newBullets = generateBullets();
+      game.bullets = newBullets.bullets;
+      game.liveCount = newBullets.liveCount;
+      game.blankCount = newBullets.blankCount;
     }
 
-    io.to(socket.roomCode).emit('updateState', getPublicState(room));
+    sendGameState(roomId);
+
+    // AI 턴일 경우 간단한 AI 동작 실행
+    if (game.isAI && game.turn === 'ai_dealer') {
+      setTimeout(() => processAITurn(roomId), 1500);
+    }
   });
 
-  socket.on('shoot', ({ targetSelf }) => {
-    const room = rooms[socket.roomCode];
-    if (!room) return;
-    if (room.turnOrder[room.currentTurnIndex] !== socket.id) return;
+  // 간단한 AI 턴 로직
+  function processAITurn(roomId) {
+    const game = rooms[roomId];
+    if (!game || game.turn !== 'ai_dealer') return;
 
-    const shooter = room.players[socket.id];
-    const oppId = room.turnOrder.find(id => id !== socket.id);
-    const opponent = room.players[oppId];
+    const bullet = game.bullets.shift();
+    const isLive = bullet === 'live';
+    const damage = game.isSawActive && isLive ? 2 : 1;
+    game.isSawActive = false;
 
-    const isLive = room.bullets.pop();
-    const damage = room.sawActive ? 2 : 1;
-    let keepTurn = false;
-
-    if (targetSelf) {
-      if (isLive) {
-        shooter.hp = Math.max(0, shooter.hp - damage);
-        room.logs = `탕! 💥 실탄이었습니다! ${shooter.name}이(가) ${damage} 데미지를 입었습니다.`;
-      } else {
-        room.logs = `찰칵! ⚪ 공포탄이었습니다. ${shooter.name}이(가) 턴을 한 번 더 갖습니다!`;
-        keepTurn = true;
-      }
+    if (isLive) {
+      game.liveCount--;
+      game.players[socket.id].hp = Math.max(0, game.players[socket.id].hp - damage);
     } else {
-      if (isLive) {
-        opponent.hp = Math.max(0, opponent.hp - damage);
-        room.logs = `탕! 💥 ${opponent.name}에게 실탄을 맞췄습니다! (${damage} 데미지)`;
+      game.blankCount--;
+    }
+
+    io.to(socket.id).emit('shotResult', { isLive, target: 'opponent' });
+
+    if (game.isOpponentHandcuffed) {
+      game.isOpponentHandcuffed = false;
+    } else {
+      game.turn = socket.id;
+    }
+
+    if (game.bullets.length === 0) {
+      const newBullets = generateBullets();
+      game.bullets = newBullets.bullets;
+      game.liveCount = newBullets.liveCount;
+      game.blankCount = newBullets.blankCount;
+    }
+
+    sendGameState(roomId);
+  }
+
+  // 4. 아이템 사용
+  socket.on('useItem', ({ itemKey, index }) => {
+    const roomId = socket.roomId;
+    const game = rooms[roomId];
+    if (!game || game.turn !== socket.id) return;
+
+    const user = game.players[socket.id];
+    user.items.splice(index, 1);
+
+    if (itemKey === 'cigarette') {
+      user.hp = Math.min(4, user.hp + 1);
+      socket.emit('itemResult', { title: '담배', message: '체력을 1 회복했습니다.', effect: 'heal' });
+    } else if (itemKey === 'saw') {
+      game.isSawActive = true;
+      socket.emit('itemResult', { title: '톱', message: '다음 실탄 데미지가 2배가 됩니다!', effect: 'saw' });
+    } else if (itemKey === 'handcuffs') {
+      if (!game.isOpponentHandcuffed) {
+        game.isOpponentHandcuffed = true;
+        socket.emit('itemResult', { title: '수갑', message: '상대의 다음 턴을 묶었습니다.' });
+      }
+    } else if (itemKey === 'magnifier') {
+      const nextBullet = game.bullets[0] === 'live' ? '실탄' : '공포탄';
+      socket.emit('itemResult', { title: '돋보기', message: `현재 약실의 총알은 [ ${nextBullet} ] 입니다.` });
+    } else if (itemKey === 'medicine') {
+      if (Math.random() < 0.4) {
+        user.hp = Math.min(4, user.hp + 2);
+        socket.emit('itemResult', { title: '만료된 약', message: '약이 효과가 있었습니다! 체력 +2', effect: 'heal' });
       } else {
-        room.logs = `찰칵! ⚪ 공포탄이었습니다.`;
+        user.hp = Math.max(0, user.hp - 1);
+        socket.emit('itemResult', { title: '만료된 약', message: '부작용 발생! 체력 -1', effect: 'poison' });
       }
     }
 
-    room.sawActive = false;
-
-    if (!keepTurn) {
-      if (room.handcuffsActive) {
-        room.logs += " (수갑 효과로 턴 유지!)";
-        room.handcuffsActive = false;
-      } else {
-        room.currentTurnIndex = (room.currentTurnIndex + 1) % 2;
-      }
-    }
-
-    if (room.bullets.length === 0 && shooter.hp > 0 && opponent.hp > 0) {
-      startNewRound(room);
-    }
-
-    io.to(socket.roomCode).emit('updateState', getPublicState(room));
+    sendGameState(roomId);
   });
 
   socket.on('disconnect', () => {
-    delete rooms[socket.roomCode];
+    if (socket.roomId && rooms[socket.roomId]) {
+      delete rooms[socket.roomId];
+    }
   });
 });
 
-function getPublicState(room) {
-  const liveCount = room.bullets.filter(b => b === true).length;
-  const blankCount = room.bullets.filter(b => b === false).length;
-
-  return {
-    players: room.players,
-    turn: room.turnOrder[room.currentTurnIndex],
-    bulletInfo: `남은 실탄: ${liveCount} | 공포탄: ${blankCount}`,
-    logs: room.logs
-  };
-}
-
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => console.log(`Server on port ${PORT}`));
+server.listen(PORT, () => {
+  console.log(`서버가 http://localhost:${PORT} 에서 실행 중입니다.`);
+});
