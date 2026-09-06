@@ -34,7 +34,6 @@ let isMyTurn = false;
 let isStealingMode = false;
 let isOpponentHandcuffed = false;
 
-// 아이템 목록 및 설명 데이터
 const ITEM_DATA = {
   cigarette: { name: '🚬 담배', desc: '체력을 1 회복합니다. (최대 체력 이상 회복 불가)' },
   beer: { name: '🍺 맥주', desc: '현재 약실의 총알을 한 발 배출합니다.' },
@@ -47,15 +46,12 @@ const ITEM_DATA = {
   adrenaline: { name: '💉 아드레날린', desc: '상대의 아이템 중 하나를 즉시 빼앗아 사용합니다.' }
 };
 
-// ====================================
-// 🎬 Visual Effects (타격감 & 연출)
-// ====================================
-
+// 🎬 Visual Effects
 function triggerLiveShotEffect() {
   appEl.classList.remove('shake-heavy', 'flash-red-bg');
   shotgunEl.classList.remove('recoil-fire', 'flash-red-active');
 
-  void appEl.offsetWidth; // Reflow
+  void appEl.offsetWidth;
 
   appEl.classList.add('shake-heavy', 'flash-red-bg');
   shotgunEl.classList.add('recoil-fire', 'flash-red-active');
@@ -101,21 +97,18 @@ function updateHpWithEffect(el, count) {
   setTimeout(() => el.classList.remove('hp-damage'), 500);
 }
 
-// ====================================
-// 🎮 Long Press (아이템 정보 꾹 누르기)
-// ====================================
-
+// 🎮 아이템 꾹 누르기 (설명 보기)
 function attachLongPressInfo(element, itemKey, onShortClick) {
   let timer = null;
   let isLongPress = false;
 
-  const start = (e) => {
+  const start = () => {
     isLongPress = false;
     timer = setTimeout(() => {
       isLongPress = true;
       const info = ITEM_DATA[itemKey] || { name: itemKey, desc: '정보가 없습니다.' };
       showModal(info.name, info.desc);
-    }, 500); // 0.5초 꾹 누르면 설명 모달 출력
+    }, 500);
   };
 
   const cancel = () => {
@@ -125,25 +118,21 @@ function attachLongPressInfo(element, itemKey, onShortClick) {
     }
   };
 
-  const end = (e) => {
+  const end = () => {
     cancel();
-    // 꾹 누른 게 아닌 단타 클릭일 때만 아이템 사용 실행
     if (!isLongPress && onShortClick) {
       onShortClick();
     }
   };
 
-  // 모바일 터치 이벤트
   element.addEventListener('touchstart', start, { passive: true });
   element.addEventListener('touchend', end);
   element.addEventListener('touchmove', cancel);
 
-  // PC 마우스 이벤트
   element.addEventListener('mousedown', start);
   element.addEventListener('mouseup', end);
   element.addEventListener('mouseleave', cancel);
 
-  // 우클릭 시에도 정보 표시
   element.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     const info = ITEM_DATA[itemKey] || { name: itemKey, desc: '정보가 없습니다.' };
@@ -151,10 +140,7 @@ function attachLongPressInfo(element, itemKey, onShortClick) {
   });
 }
 
-// ====================================
-// 🎮 Game UI & Logic
-// ====================================
-
+// 🎮 Event Handlers & Game Loop
 btnJoin.addEventListener('click', () => {
   const name = playerNameInput.value.trim() || '플레이어';
   const room = roomCodeInput.value.trim() || 'default';
@@ -196,7 +182,6 @@ function renderItems(myItems, oppItems) {
   myItemsEl.innerHTML = '';
   oppItemsEl.innerHTML = '';
 
-  // 내 아이템 목록 생성
   myItems.forEach((item, idx) => {
     const btn = document.createElement('button');
     btn.className = 'item-btn';
@@ -206,7 +191,6 @@ function renderItems(myItems, oppItems) {
       btn.disabled = true;
     }
 
-    // 꾹 누르기 정보 & 단타 사용 연결
     attachLongPressInfo(btn, item, () => {
       if (!btn.disabled) useItem(item, idx);
     });
@@ -214,7 +198,6 @@ function renderItems(myItems, oppItems) {
     myItemsEl.appendChild(btn);
   });
 
-  // 상대 아이템 목록 생성 (아드레날린 강탈용)
   oppItems.forEach((item, idx) => {
     const btn = document.createElement('button');
     btn.className = 'item-btn';
@@ -255,7 +238,6 @@ function stealItem(itemKey, index) {
   socket.emit('stealItem', { itemKey, index });
 }
 
-// 사격 버튼
 btnShootOpp.addEventListener('click', () => {
   if (!isMyTurn) return;
   socket.emit('shoot', { target: 'opponent' });
@@ -266,7 +248,6 @@ btnShootSelf.addEventListener('click', () => {
   socket.emit('shoot', { target: 'self' });
 });
 
-// 결과 수신
 socket.on('shotResult', (res) => {
   if (res.isLive) {
     triggerLiveShotEffect();
@@ -283,7 +264,6 @@ socket.on('itemResult', (res) => {
   if (res.effect === 'heal') triggerItemEffect('heal');
 });
 
-// 모달 안내
 function showModal(title, text) {
   modalTitle.textContent = title;
   modalDesc.textContent = text;
@@ -293,7 +273,6 @@ function showModal(title, text) {
 modalClose.addEventListener('click', () => {
   itemModal.classList.add('hidden');
 
-  // 승리/패배 메시지일 때 확인 누르면 로비로 이동
   if (modalTitle.textContent.includes('승리') || modalTitle.textContent.includes('패배')) {
     gameScreen.classList.add('hidden');
     lobbyScreen.classList.remove('hidden');
