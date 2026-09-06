@@ -70,7 +70,7 @@ let aiState = {
   bullets: [], turn: "player", sawActive: false, handcuffsActive: false, knownNextBullet: null
 };
 
-// 버튼 이벤트 연결 (안전 리스너 적용)
+// 버튼 이벤트 연결
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("btn-join")?.addEventListener("click", () => {
     isAiMode = false;
@@ -150,6 +150,7 @@ function updateAiUI(logMsg) {
 function renderAiItems() {
   const isMyTurn = aiState.turn === "player";
 
+  // 내 아이템
   const myContainer = document.getElementById("my-items");
   myContainer.innerHTML = "";
   aiState.playerItems.forEach((item, index) => {
@@ -161,7 +162,9 @@ function renderAiItems() {
     if (isMyTurn) {
       btn.onclick = () => {
         if (item === "ADRENALINE") {
-          if (aiState.aiItems.length === 0) return alert("훔쳐올 상대 아이템이 없습니다!");
+          const hasStealable = aiState.aiItems.some(i => i !== "ADRENALINE");
+          if (!hasStealable) return alert("훔쳐올 수 있는 상대 아이템이 없습니다! (아드레날린 제외)");
+          
           isAdrenalineMode = true;
           selectedAdrenalineIndex = index;
           updateAiUI("훔쳐올 상대 아이템을 클릭하세요!");
@@ -176,6 +179,7 @@ function renderAiItems() {
     myContainer.appendChild(btn);
   });
 
+  // 상대 아이템
   const oppContainer = document.getElementById("opp-items");
   oppContainer.innerHTML = "";
   aiState.aiItems.forEach((item, index) => {
@@ -185,14 +189,19 @@ function renderAiItems() {
     bindLongTouchDesc(btn, item);
 
     if (isMyTurn && isAdrenalineMode) {
-      btn.disabled = false;
-      btn.classList.add("stealable");
-      btn.onclick = () => {
-        const stolenItem = aiState.aiItems.splice(index, 1)[0];
-        aiState.playerItems.splice(selectedAdrenalineIndex, 1);
-        isAdrenalineMode = false;
-        executeItemEffect(stolenItem, true, `상대의 ${ITEM_NAMES[stolenItem]}을(를) 훔쳐 사용했습니다!`);
-      };
+      if (item === "ADRENALINE") {
+        btn.disabled = true;
+        btn.classList.remove("stealable");
+      } else {
+        btn.disabled = false;
+        btn.classList.add("stealable");
+        btn.onclick = () => {
+          const stolenItem = aiState.aiItems.splice(index, 1)[0];
+          aiState.playerItems.splice(selectedAdrenalineIndex, 1);
+          isAdrenalineMode = false;
+          executeItemEffect(stolenItem, true, `상대의 ${ITEM_NAMES[stolenItem]}을(를) 훔쳐 사용했습니다!`);
+        };
+      }
     } else {
       btn.disabled = true;
       btn.classList.remove("stealable");
