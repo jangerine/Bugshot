@@ -8,13 +8,9 @@ const io = new Server(server);
 
 app.use(express.static('public'));
 
-// 게임 방 및 AI 게임 상태 저장소
 const rooms = {};
-
-// 아이템 목록
 const ITEMS = ['cigarette', 'beer', 'magnifier', 'saw', 'handcuffs', 'medicine', 'inverter', 'phone', 'adrenaline'];
 
-// 무작위 아이템 지급 헬퍼
 function getRandomItems(count = 2) {
   const result = [];
   for (let i = 0; i < count; i++) {
@@ -23,7 +19,6 @@ function getRandomItems(count = 2) {
   return result;
 }
 
-// 총알 덱 생성 (실탄 1~4, 공포탄 1~4)
 function generateBullets() {
   const live = Math.floor(Math.random() * 3) + 2; // 2~4발
   const blank = Math.floor(Math.random() * 3) + 1; // 1~3발
@@ -31,13 +26,59 @@ function generateBullets() {
   for (let i = 0; i < live; i++) bullets.push('live');
   for (let i = 0; i < blank; i++) bullets.push('blank');
   
-  // 셔플
   for (let i = bullets.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [bullets[i], bullets[j]] = [bullets[j], bullets[i]];
   }
   
   return { bullets, liveCount: live, blankCount: blank };
+}
+
+// 🏆 게임 종료 및 승패 확인 헬퍼
+function checkGameOver(roomId) {
+  const game = rooms[roomId];
+  if (!game) return false;
+
+  let deadPlayerId = null;
+  let winnerId = null;
+
+  for (const id in game.players) {
+    if (game.players[id].hp <= 0) {
+      deadPlayerId = id;
+      break;
+    }
+  }
+
+  if (deadPlayerId) {
+    if (game.isAI) {
+      if (deadPlayerId === 'ai_dealer') {
+        io.to(game.humanSocketId).emit('itemResult', { 
+          title: '🏆 승리!', 
+          message: '딜러를 쓰러뜨리고 생존했습니다!' 
+        });
+      } else {
+        io.to(game.humanSocketId).emit('itemResult', { 
+          title: '💀 패배', 
+          message: '딜러의 총에 맞아 사망했습니다...' 
+        });
+      }
+    } else {
+      // 멀티플레이어 승패 처리
+      game.playerOrder.forEach((id) => {
+        if (id === deadPlayerId) {
+          io.to(id).emit('itemResult', { title: '💀 패배', message: '목숨을 잃었습니다...' });
+        } else {
+          io.to(id).emit('itemResult', { title: '🏆 승리!', message: '최종 생존자가 되었습니다!' });
+        }
+      });
+    }
+
+    // 게임 종료 후 방 데이터 삭제
+    delete rooms[roomId];
+    return true;
+  }
+
+  return false;
 }
 
 io.on('connection', (socket) => {
@@ -50,6 +91,7 @@ io.on('connection', (socket) => {
 
     rooms[roomId] = {
       isAI: true,
+      humanSocketId: socket.id,
       players: {
         [socket.id]: { name: name || '플레이어', hp: 4, items: getRandomItems(2) },
         'ai_dealer': { name: '딜러 (AI)', hp: 4, items: getRandomItems(2) }
@@ -95,7 +137,6 @@ io.on('connection', (socket) => {
       roomData.playerOrder.push(socket.id);
     }
 
-    // 2명 모이면 게임 시작
     if (roomData.playerOrder.length === 2) {
       const bulletData = generateBullets();
       roomData.bullets = bulletData.bullets;
@@ -110,7 +151,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // 상태 전송 헬퍼
   function sendGameState(roomId) {
     const gameState = rooms[roomId];
     if (!gameState) return;
@@ -132,7 +172,6 @@ io.on('connection', (socket) => {
         blankBullets: gameState.blankCount
       });
     } else {
-      // 멀티플레이어 각각 시점에 맞게 전송
       gameState.playerOrder.forEach((id) => {
         const oppId = gameState.playerOrder.find(pId => pId !== id);
         const me = gameState.players[id];
@@ -163,12 +202,11 @@ io.on('connection', (socket) => {
     const bullet = game.bullets.shift();
     const isLive = bullet === 'live';
     const damage = game.isSawActive && isLive ? 2 : 1;
-    game.isSawActive = false; // 톱 효과 리셋
+    game.isSawActive = false;
 
     if (isLive) game.liveCount--;
     else game.blankCount--;
 
-    // 피격 대상 계산
     let targetId = target === 'opponent' ? (game.isAI ? 'ai_dealer' : game.playerOrder.find(id => id !== socket.id)) : socket.id;
 
     if (isLive) {
@@ -177,16 +215,17 @@ io.on('connection', (socket) => {
 
     io.to(socket.id).emit('shotResult', { isLive, target });
 
-    // 턴 교체 로직 (자신에게 공포탄 쐈을 땐 턴 유지)
+    // 💥 체력 0 판정 먼저 실행
+    if (checkGameOver(roomId)) return;
+
     if (!(target === 'self' && !isLive)) {
       if (game.isOpponentHandcuffed) {
-        game.isOpponentHandcuffed = false; // 수갑 풀림
+        game.isOpponentHandcuffed = false;
       } else {
         game.turn = game.isAI ? (game.turn === socket.id ? 'ai_dealer' : socket.id) : game.playerOrder.find(id => id !== socket.id);
       }
     }
 
-    // 총알 다 떨어졌으면 재장전
     if (game.bullets.length === 0) {
       const newBullets = generateBullets();
       game.bullets = newBullets.bullets;
@@ -196,13 +235,11 @@ io.on('connection', (socket) => {
 
     sendGameState(roomId);
 
-    // AI 턴일 경우 간단한 AI 동작 실행
     if (game.isAI && game.turn === 'ai_dealer') {
-      setTimeout(() => processAITurn(roomId), 1500);
+      setTimeout(() => processAITurn(roomId), 1200);
     }
   });
 
-  // 간단한 AI 턴 로직
   function processAITurn(roomId) {
     const game = rooms[roomId];
     if (!game || game.turn !== 'ai_dealer') return;
@@ -220,6 +257,9 @@ io.on('connection', (socket) => {
     }
 
     io.to(socket.id).emit('shotResult', { isLive, target: 'opponent' });
+
+    // 💥 체력 0 판정
+    if (checkGameOver(roomId)) return;
 
     if (game.isOpponentHandcuffed) {
       game.isOpponentHandcuffed = false;
@@ -267,6 +307,9 @@ io.on('connection', (socket) => {
       } else {
         user.hp = Math.max(0, user.hp - 1);
         socket.emit('itemResult', { title: '만료된 약', message: '부작용 발생! 체력 -1', effect: 'poison' });
+        
+        // 약 먹고 체력이 0이 되어 자멸했을 경우 체크
+        if (checkGameOver(roomId)) return;
       }
     }
 
