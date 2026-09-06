@@ -34,13 +34,11 @@ function generateBullets() {
   return { bullets, liveCount: live, blankCount: blank };
 }
 
-// 🏆 게임 종료 및 승패 확인 헬퍼
 function checkGameOver(roomId) {
   const game = rooms[roomId];
   if (!game) return false;
 
   let deadPlayerId = null;
-  let winnerId = null;
 
   for (const id in game.players) {
     if (game.players[id].hp <= 0) {
@@ -63,7 +61,6 @@ function checkGameOver(roomId) {
         });
       }
     } else {
-      // 멀티플레이어 승패 처리
       game.playerOrder.forEach((id) => {
         if (id === deadPlayerId) {
           io.to(id).emit('itemResult', { title: '💀 패배', message: '목숨을 잃었습니다...' });
@@ -73,7 +70,6 @@ function checkGameOver(roomId) {
       });
     }
 
-    // 게임 종료 후 방 데이터 삭제
     delete rooms[roomId];
     return true;
   }
@@ -84,7 +80,6 @@ function checkGameOver(roomId) {
 io.on('connection', (socket) => {
   console.log(`플레이어 접속: ${socket.id}`);
 
-  // 1. AI전 시작
   socket.on('startVsAI', ({ name }) => {
     const roomId = `ai_${socket.id}`;
     const bulletData = generateBullets();
@@ -111,7 +106,6 @@ io.on('connection', (socket) => {
     sendGameState(roomId);
   });
 
-  // 2. 멀티플레이 방 입장
   socket.on('joinRoom', ({ name, room }) => {
     const roomId = room || 'default';
     socket.join(roomId);
@@ -193,7 +187,6 @@ io.on('connection', (socket) => {
     }
   }
 
-  // 3. 사격 처리
   socket.on('shoot', ({ target }) => {
     const roomId = socket.roomId;
     const game = rooms[roomId];
@@ -215,7 +208,6 @@ io.on('connection', (socket) => {
 
     io.to(socket.id).emit('shotResult', { isLive, target });
 
-    // 💥 체력 0 판정 먼저 실행
     if (checkGameOver(roomId)) return;
 
     if (!(target === 'self' && !isLive)) {
@@ -258,7 +250,6 @@ io.on('connection', (socket) => {
 
     io.to(socket.id).emit('shotResult', { isLive, target: 'opponent' });
 
-    // 💥 체력 0 판정
     if (checkGameOver(roomId)) return;
 
     if (game.isOpponentHandcuffed) {
@@ -277,7 +268,6 @@ io.on('connection', (socket) => {
     sendGameState(roomId);
   }
 
-  // 4. 아이템 사용
   socket.on('useItem', ({ itemKey, index }) => {
     const roomId = socket.roomId;
     const game = rooms[roomId];
@@ -288,27 +278,66 @@ io.on('connection', (socket) => {
 
     if (itemKey === 'cigarette') {
       user.hp = Math.min(4, user.hp + 1);
-      socket.emit('itemResult', { title: '담배', message: '체력을 1 회복했습니다.', effect: 'heal' });
-    } else if (itemKey === 'saw') {
+      socket.emit('itemResult', { title: '🚬 담배', message: '체력을 1 회복했습니다.', effect: 'heal' });
+    } 
+    else if (itemKey === 'saw') {
       game.isSawActive = true;
-      socket.emit('itemResult', { title: '톱', message: '다음 실탄 데미지가 2배가 됩니다!', effect: 'saw' });
-    } else if (itemKey === 'handcuffs') {
+      socket.emit('itemResult', { title: '🪚 톱', message: '다음 실탄의 데미지가 2배가 됩니다!', effect: 'saw' });
+    } 
+    else if (itemKey === 'handcuffs') {
       if (!game.isOpponentHandcuffed) {
         game.isOpponentHandcuffed = true;
-        socket.emit('itemResult', { title: '수갑', message: '상대의 다음 턴을 묶었습니다.' });
+        socket.emit('itemResult', { title: '⛓️ 수갑', message: '상대의 다음 턴을 묶었습니다.' });
       }
-    } else if (itemKey === 'magnifier') {
+    } 
+    else if (itemKey === 'magnifier') {
       const nextBullet = game.bullets[0] === 'live' ? '실탄' : '공포탄';
-      socket.emit('itemResult', { title: '돋보기', message: `현재 약실의 총알은 [ ${nextBullet} ] 입니다.` });
-    } else if (itemKey === 'medicine') {
+      socket.emit('itemResult', { title: '🔍 돋보기', message: `현재 약실의 총알은 [ ${nextBullet} ] 입니다.` });
+    } 
+    else if (itemKey === 'beer') {
+      const ejected = game.bullets.shift();
+      if (ejected === 'live') game.liveCount--;
+      else game.blankCount--;
+
+      socket.emit('itemResult', { 
+        title: '🍺 맥주', 
+        message: `약실에서 [ ${ejected === 'live' ? '실탄' : '공포탄'} ]을(를) 배출했습니다.` 
+      });
+    } 
+    else if (itemKey === 'inverter') {
+      if (game.bullets.length > 0) {
+        const current = game.bullets[0];
+        if (current === 'live') {
+          game.bullets[0] = 'blank';
+          game.liveCount--;
+          game.blankCount++;
+        } else {
+          game.bullets[0] = 'live';
+          game.blankCount--;
+          game.liveCount++;
+        }
+        socket.emit('itemResult', { title: '🔄 반전기', message: '현재 약실 총알의 성질을 반전시켰습니다!' });
+      }
+    } 
+    else if (itemKey === 'phone') {
+      if (game.bullets.length <= 1) {
+        socket.emit('itemResult', { title: '📞 대포폰', message: '미래를 확인할 총알이 충분하지 않습니다.' });
+      } else {
+        const targetIndex = Math.floor(Math.random() * (game.bullets.length - 1)) + 1;
+        const bulletType = game.bullets[targetIndex] === 'live' ? '실탄' : '공포탄';
+        socket.emit('itemResult', { 
+          title: '📞 대포폰', 
+          message: `[ ${targetIndex + 1}번째 ] 총알은 [ ${bulletType} ] 입니다.` 
+        });
+      }
+    } 
+    else if (itemKey === 'medicine') {
       if (Math.random() < 0.4) {
         user.hp = Math.min(4, user.hp + 2);
-        socket.emit('itemResult', { title: '만료된 약', message: '약이 효과가 있었습니다! 체력 +2', effect: 'heal' });
+        socket.emit('itemResult', { title: '💊 만료된 약', message: '약 효과 발동! 체력 +2 회복', effect: 'heal' });
       } else {
         user.hp = Math.max(0, user.hp - 1);
-        socket.emit('itemResult', { title: '만료된 약', message: '부작용 발생! 체력 -1', effect: 'poison' });
-        
-        // 약 먹고 체력이 0이 되어 자멸했을 경우 체크
+        socket.emit('itemResult', { title: '💊 만료된 약', message: '부작용 발생! 체력 -1 손실', effect: 'poison' });
         if (checkGameOver(roomId)) return;
       }
     }
