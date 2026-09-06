@@ -1,6 +1,5 @@
 const socket = io();
 
-// DOM 요소 참조
 const lobbyScreen = document.getElementById('lobby-screen');
 const gameScreen = document.getElementById('game-screen');
 const playerNameInput = document.getElementById('player-name');
@@ -29,7 +28,6 @@ const modalClose = document.getElementById('modal-close');
 const appEl = document.getElementById('app');
 const shotgunEl = document.querySelector('.shotgun-icon');
 
-// 상태 관리
 let isMyTurn = false;
 let isStealingMode = false;
 let isOpponentHandcuffed = false;
@@ -77,6 +75,20 @@ function triggerBlankShotEffect() {
   }, 200);
 }
 
+function triggerReloadEffect(liveCount, blankCount) {
+  shotgunEl.classList.remove('reload-anim');
+  void shotgunEl.offsetWidth;
+  shotgunEl.classList.add('reload-anim');
+
+  statusTextEl.textContent = `🔄 [재장전] 실탄 ${liveCount}발 / 공포탄 ${blankCount}발이 장전되었습니다!`;
+  appEl.classList.add('flash-yellow');
+
+  setTimeout(() => {
+    shotgunEl.classList.remove('reload-anim');
+    appEl.classList.remove('flash-yellow');
+  }, 600);
+}
+
 function triggerItemEffect(type) {
   appEl.classList.remove('flash-heal', 'flash-poison', 'flash-saw', 'flash-yellow');
   void appEl.offsetWidth;
@@ -97,7 +109,7 @@ function updateHpWithEffect(el, count) {
   setTimeout(() => el.classList.remove('hp-damage'), 500);
 }
 
-// 🎮 아이템 꾹 누르기 (설명 보기)
+// 🎮 아이템 꾹 누르기
 function attachLongPressInfo(element, itemKey, onShortClick) {
   let timer = null;
   let isLongPress = false;
@@ -140,7 +152,7 @@ function attachLongPressInfo(element, itemKey, onShortClick) {
   });
 }
 
-// 🎮 Event Handlers & Game Loop
+// 🎮 Socket Events
 btnJoin.addEventListener('click', () => {
   const name = playerNameInput.value.trim() || '플레이어';
   const room = roomCodeInput.value.trim() || 'default';
@@ -258,6 +270,10 @@ socket.on('shotResult', (res) => {
   }
 });
 
+socket.on('reloadBullets', (data) => {
+  triggerReloadEffect(data.liveBullets, data.blankBullets);
+});
+
 socket.on('itemResult', (res) => {
   showModal(res.title || '아이템', res.message);
   if (res.effect === 'poison') triggerItemEffect('poison');
@@ -277,25 +293,4 @@ modalClose.addEventListener('click', () => {
     gameScreen.classList.add('hidden');
     lobbyScreen.classList.remove('hidden');
   }
-});
-// 🎬 장전 애니메이션 연출
-function triggerReloadEffect(liveCount, blankCount) {
-  // 총기 그래픽 젖힘/움직임 애니메이션
-  shotgunEl.classList.remove('reload-anim');
-  void shotgunEl.offsetWidth; // Reflow
-  shotgunEl.classList.add('reload-anim');
-
-  // 화면 중앙에 장전 텍스트 팝업 및 화면 번쩍임
-  statusTextEl.textContent = `🔄 [재장전] 실탄 ${liveCount}발 / 공포탄 ${blankCount}발이 장전되었습니다!`;
-  appEl.classList.add('flash-yellow');
-
-  setTimeout(() => {
-    shotgunEl.classList.remove('reload-anim');
-    appEl.classList.remove('flash-yellow');
-  }, 600);
-}
-
-// 서버에서 재장전 신호가 오면 연출 실행
-socket.on('reloadBullets', (data) => {
-  triggerReloadEffect(data.liveBullets, data.blankBullets);
 });
