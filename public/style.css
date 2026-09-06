@@ -86,3 +86,52 @@ input { width: 85%; padding: 12px; margin: 6px 0; background: #2a2a2a; border: 1
 .danger { background: #8b0000; color: #fff; }
 .warning { background: #a76800; color: #fff; }
 .action-btn:disabled { background: #333; color: #666; }
+/* ================= 모션 및 효과 ================= */
+
+/* 샷건 아이콘 기본 트랜지션 */
+.shotgun-icon {
+  font-size: 38px;
+  margin-top: 4px;
+  transition: transform 0.1s ease-in-out;
+  display: inline-block;
+}
+
+/* 화면 흔들림 (강한 실탄 피격) */
+.shake {
+  animation: shakeAnim 0.3s ease-in-out;
+}
+
+@keyframes shakeAnim {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-8px, 6px); }
+  40% { transform: translate(8px, -6px); }
+  60% { transform: translate(-5px, 4px); }
+  80% { transform: translate(5px, -4px); }
+  100% { transform: translate(0, 0); }
+}
+
+/* 화면 반짝임 (공포탄/실탄 플래시) */
+.flash-red {
+  animation: flashRedAnim 0.2s ease-in-out;
+}
+
+@keyframes flashRedAnim {
+  0% { background-color: #1a1a1a; }
+  50% { background-color: #8b0000; }
+  100% { background-color: #1a1a1a; }
+}
+
+.flash-white {
+  animation: flashWhiteAnim 0.15s ease-in-out;
+}
+
+@keyframes flashWhiteAnim {
+  0% { background-color: #1a1a1a; }
+  50% { background-color: #444444; }
+  100% { background-color: #1a1a1a; }
+}
+
+/* 총기 반동 애니메이션 */
+.recoil {
+  transform: translateY(-15px) scale(1.2) rotate(-10deg);
+}
