@@ -1,22 +1,85 @@
 const socket = io();
 
+// 아이템 명칭 및 설명 데이터
 const ITEM_NAMES = { 
   MAGNIFIER: "🔍돋보기", CIGARETTE: "🚬담배", SAW: "🪚톱", HANDCUFFS: "🔗수갑",
   BEER: "🍺맥주", PHONE: "📞전화기", INVERTER: "🔄변환기", ADRENALINE: "💉아드레날린", MEDICINE: "💊만료된약"
 };
+
+const ITEM_DESCS = {
+  MAGNIFIER: "현재 장전된 다음 탄환이 실탄인지 공포탄인지 혼자만 몰래 확인합니다.",
+  CIGARETTE: "체력을 1 회복합니다.",
+  SAW: "총열을 잘라 다음 실탄의 데미지를 2점으로 늘립니다.",
+  HANDCUFFS: "상대방의 다음 턴을 한 번 스킵하게 만듭니다.",
+  BEER: "현재 장전된 다음 탄환을 쏘지 않고 밖으로 배출합니다.",
+  PHONE: "미래의 몇 번째 탄환이 무슨 탄인지 힌트를 얻습니다.",
+  INVERTER: "현재 장전된 다음 탄환의 종류를 반대로 전환합니다. (실탄↔공포탄)",
+  ADRENALINE: "상대방의 아이템 중 하나를 빼앗아 즉시 사용합니다.",
+  MEDICINE: "40% 확률로 체력 2 회복, 60% 확률로 체력 1을 잃습니다."
+};
+
 const ITEMS = Object.keys(ITEM_NAMES);
+
+// 시각 효과 연출 함수 (흔들림 + 반동)
+function triggerEffect(isLive) {
+  const app = document.getElementById("app");
+  const shotgun = document.querySelector(".shotgun-icon");
+
+  if (shotgun) {
+    shotgun.classList.add("recoil");
+    setTimeout(() => shotgun.classList.remove("recoil"), 150);
+  }
+
+  if (isLive) {
+    app.classList.add("shake", "flash-red");
+    setTimeout(() => app.classList.remove("shake", "flash-red"), 300);
+  } else {
+    app.classList.add("flash-white");
+    setTimeout(() => app.classList.remove("flash-white"), 150);
+  }
+}
+
+// 아이템 설명 팝업 제어
+function showItemDesc(itemKey) {
+  document.getElementById("modal-title").innerText = ITEM_NAMES[itemKey];
+  document.getElementById("modal-desc").innerText = ITEM_DESCS[itemKey];
+  document.getElementById("item-modal").classList.remove("hidden");
+}
+
+document.getElementById("modal-close")?.addEventListener("click", () => {
+  document.getElementById("item-modal").classList.add("hidden");
+});
+
+function bindLongTouchDesc(btnElement, itemKey) {
+  let timer = null;
+
+  btnElement.addEventListener("touchstart", (e) => {
+    timer = setTimeout(() => {
+      showItemDesc(itemKey);
+    }, 500);
+  });
+
+  btnElement.addEventListener("touchend", () => clearTimeout(timer));
+  btnElement.addEventListener("touchmove", () => clearTimeout(timer));
+
+  btnElement.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    showItemDesc(itemKey);
+  });
+}
+
+/* ================= 게임 모드 제어 ================= */
 
 let isAiMode = false;
 let aiState = {
   playerHp: 4, aiHp: 4,
   playerItems: [], aiItems: [],
-  bullets: [], // true: 실탄, false: 공포탄
-  turn: "player", // "player" or "ai"
+  bullets: [],
+  turn: "player",
   sawActive: false, handcuffsActive: false,
-  knownNextBullet: null // AI가 돋보기/전화기 등으로 파악한 정보 (true/false)
+  knownNextBullet: null
 };
 
-// 버튼 이벤트
 document.getElementById("btn-join").addEventListener("click", () => {
   isAiMode = false;
   const name = document.getElementById("player-name").value || "익명";
@@ -37,7 +100,7 @@ document.getElementById("btn-ai").addEventListener("click", () => {
 /* ================= AI 모드 로직 ================= */
 
 function startAiGame() {
-  const name = document.getElementById("player-name").value || "준귤";
+  const name = document.getElementById("player-name").value || "준귤님";
   document.getElementById("my-name").innerText = `${name} (나)`;
   document.getElementById("opp-name").innerText = "딜러 (AI)";
   
@@ -64,7 +127,6 @@ function startAiRound(msg) {
   aiState.handcuffsActive = false;
   aiState.knownNextBullet = null;
 
-  // 아이템 지급 (최대 8개)
   const getRandomItem = () => ITEMS[Math.floor(Math.random() * ITEMS.length)];
   aiState.playerItems = [...aiState.playerItems, getRandomItem(), getRandomItem()].slice(0, 8);
   aiState.aiItems = [...aiState.aiItems, getRandomItem(), getRandomItem()].slice(0, 8);
@@ -106,6 +168,9 @@ function renderAiItems(elementId, items, isMyTurn) {
     const btn = document.createElement("button");
     btn.className = "item-btn";
     btn.innerText = ITEM_NAMES[item];
+
+    bindLongTouchDesc(btn, item); // 롱터치 바인딩
+
     if (elementId === "my-items" && isMyTurn) {
       btn.onclick = () => usePlayerItemInAi(index);
     } else {
@@ -159,9 +224,10 @@ function usePlayerItemInAi(index) {
   }
 }
 
-// 플레이어 사격 (AI 모드)
 function shootInAi(targetSelf) {
   const isLive = aiState.bullets.pop();
+  triggerEffect(isLive); // 모션 연출 실행
+
   const damage = aiState.sawActive ? 2 : 1;
   aiState.sawActive = false;
   let keepTurn = false;
@@ -184,7 +250,7 @@ function shootInAi(targetSelf) {
     }
   }
 
-  aiState.knownNextBullet = null; // 총을 쐈으므로 알려진 알고리즘 초기화
+  aiState.knownNextBullet = null;
 
   if (!keepTurn) {
     if (aiState.handcuffsActive) {
@@ -203,16 +269,12 @@ function shootInAi(targetSelf) {
   }
 }
 
-/* ================= AI 지능 및 행동 턴 ================= */
-
 function playAiTurn() {
   if (aiState.turn !== "ai" || aiState.playerHp <= 0 || aiState.aiHp <= 0) return;
 
   const liveCount = aiState.bullets.filter(b => b === true).length;
-  const blankCount = aiState.bullets.filter(b => b === false).length;
   const liveProb = liveCount / aiState.bullets.length;
 
-  // 1. AI 아이템 우선순위 결정 및 사용
   if (aiState.aiHp <= 2 && useAiItem("CIGARETTE")) return;
   
   if (aiState.knownNextBullet === null && useAiItem("MAGNIFIER")) {
@@ -229,27 +291,11 @@ function playAiTurn() {
     return;
   }
 
-  if (liveProb < 0.4 && useAiItem("BEER")) {
-    const popped = aiState.bullets.pop();
-    aiState.knownNextBullet = null;
-    updateAiUI(`딜러(AI)가 맥주를 마셨습니다. (배출된 탄: ${popped ? "실탄🔴" : "공포탄⚪"})`);
-    setTimeout(playAiTurn, 1000);
-    return;
-  }
+  let targetSelf = aiState.knownNextBullet !== null ? !aiState.knownNextBullet : liveProb < 0.5;
 
-  // 2. 발사 대상 결정 (알고리즘)
-  let targetSelf = false;
-
-  if (aiState.knownNextBullet !== null) {
-    // 확정 정보가 있을 때
-    targetSelf = !aiState.knownNextBullet; // 공포탄이면 본인, 실탄이면 플레이어
-  } else {
-    // 확률에 기반한 선택
-    targetSelf = liveProb < 0.5; // 실탄 확률이 50% 미만이면 본인 사격
-  }
-
-  // 3. AI 사격
   const isLive = aiState.bullets.pop();
+  triggerEffect(isLive); // AI 사격 모션 연출
+
   const damage = aiState.sawActive ? 2 : 1;
   aiState.sawActive = false;
   aiState.knownNextBullet = null;
@@ -299,7 +345,7 @@ function useAiItem(itemName) {
   return false;
 }
 
-/* ================= 멀티플레이 소켓 이벤트 ================= */
+/* ================= 멀티플레이 ================= */
 
 socket.on("updateState", (state) => {
   if (isAiMode) return;
@@ -335,6 +381,9 @@ function renderMultiItems(elementId, items, isMyTurn) {
     const btn = document.createElement("button");
     btn.className = "item-btn";
     btn.innerText = ITEM_NAMES[item];
+
+    bindLongTouchDesc(btn, item); // 롱터치 바인딩
+
     if (elementId === "my-items" && isMyTurn) {
       btn.onclick = () => socket.emit("useItem", { itemIndex: index });
     } else {
@@ -344,7 +393,6 @@ function renderMultiItems(elementId, items, isMyTurn) {
   });
 }
 
-// 사격 버튼 바인딩 (멀티 / AI 스위칭)
 document.getElementById("btn-shoot-opp").addEventListener("click", () => {
   if (isAiMode) shootInAi(false);
   else socket.emit("shoot", { targetSelf: false });
@@ -354,23 +402,3 @@ document.getElementById("btn-shoot-self").addEventListener("click", () => {
   if (isAiMode) shootInAi(true);
   else socket.emit("shoot", { targetSelf: true });
 });
-// 시각 효과 연출 함수
-function triggerEffect(isLive) {
-  const app = document.getElementById("app");
-  const shotgun = document.querySelector(".shotgun-icon");
-
-  // 1. 총기 반동 효과
-  if (shotgun) {
-    shotgun.classList.add("recoil");
-    setTimeout(() => shotgun.classList.remove("recoil"), 150);
-  }
-
-  // 2. 화면 효과 (실탄: 강한 진동 + 빨간 플래시 / 공포탄: 하얀 플래시)
-  if (isLive) {
-    app.classList.add("shake", "flash-red");
-    setTimeout(() => app.classList.remove("shake", "flash-red"), 300);
-  } else {
-    app.classList.add("flash-white");
-    setTimeout(() => app.classList.remove("flash-white"), 150);
-  }
-}
