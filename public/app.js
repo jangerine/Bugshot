@@ -1,451 +1,243 @@
 const socket = io();
 
-const ITEM_NAMES = { 
-  MAGNIFIER: "🔍돋보기", CIGARETTE: "🚬담배", SAW: "🪚톱", HANDCUFFS: "🔗수갑",
-  BEER: "🍺맥주", PHONE: "📞전화기", INVERTER: "🔄변환기", ADRENALINE: "💉아드레날린", MEDICINE: "💊만료된약"
+// DOM 요소 참조
+const lobbyScreen = document.getElementById('lobby-screen');
+const gameScreen = document.getElementById('game-screen');
+const playerNameInput = document.getElementById('player-name');
+const roomCodeInput = document.getElementById('room-code');
+const btnJoin = document.getElementById('btn-join');
+const btnAI = document.getElementById('btn-ai');
+
+const myNameEl = document.getElementById('my-name');
+const myHpEl = document.getElementById('my-hp');
+const myItemsEl = document.getElementById('my-items');
+
+const oppNameEl = document.getElementById('opp-name');
+const oppHpEl = document.getElementById('opp-hp');
+const oppItemsEl = document.getElementById('opp-items');
+
+const bulletInfoEl = document.getElementById('bullet-info');
+const statusTextEl = document.getElementById('status-text');
+const btnShootOpp = document.getElementById('btn-shoot-opp');
+const btnShootSelf = document.getElementById('btn-shoot-self');
+
+const itemModal = document.getElementById('item-modal');
+const modalTitle = document.getElementById('modal-title');
+const modalDesc = document.getElementById('modal-desc');
+const modalClose = document.getElementById('modal-close');
+
+const appEl = document.getElementById('app');
+const shotgunEl = document.querySelector('.shotgun-icon');
+
+// 상태 관리
+let isMyTurn = false;
+let isStealingMode = false;
+let isOpponentHandcuffed = false; // 수갑 중복 방지 플래그
+
+// 아이템 목록 및 고유 로직
+const ITEM_DATA = {
+  cigarette: { name: '🚬 담배', desc: '체력을 1 회복합니다. (최대 체력 이상 회복 불가)' },
+  beer: { name: '🍺 맥주', desc: '총알을 한 발 배출합니다.' },
+  magnifier: { name: '🔍 돋보기', desc: '현재 약실의 총알 종류를 확인합니다.' },
+  saw: { name: '🪚 톱', desc: '다음 실탄의 데미지를 2배로 만듭니다.' },
+  handcuffs: { name: '⛓️ 수갑', desc: '상대의 다음 턴을 건너뜁니다. (연속 사용 불가)' },
+  medicine: { name: '💊 만료된 약', desc: '40% 확률로 체력 2 회복, 60% 확률로 체력 1 손실.' },
+  inverter: { name: '🔄 반전기', desc: '현재 총알의 종류를 반전시킵니다. (실탄↔공포탄)' },
+  phone: { name: '📞 대포폰', desc: '미래의 총알 중 하나에 대한 정보를 얻습니다.' },
+  adrenaline: { name: '💉 아드레날린', desc: '상대의 아이템 중 하나를 즉시 빼앗아 사용합니다.' }
 };
 
-const ITEM_DESCS = {
-  MAGNIFIER: "다음 탄환이 실탄인지 공포탄인지 확인합니다.",
-  CIGARETTE: "체력을 1 회복합니다.",
-  SAW: "다음 실탄의 데미지를 2배로 만듭니다.",
-  HANDCUFFS: "상대의 다음 턴을 스킵합니다.",
-  BEER: "현재 장전된 탄환을 하나 배출합니다.",
-  PHONE: "미래의 탄환 힌트를 얻습니다.",
-  INVERTER: "다음 탄환의 종류를 반대로 전환합니다.",
-  ADRENALINE: "상대의 아이템 중 하나를 빼앗아 즉시 사용합니다.",
-  MEDICINE: "40% 확률로 체력 2 회복, 60% 확률로 체력 1 손실."
-};
+// ====================================
+// 🎬 Visual Effects (타격감 & 연출)
+// ====================================
 
-const ITEMS = Object.keys(ITEM_NAMES);
+function triggerLiveShotEffect() {
+  appEl.classList.remove('shake-heavy', 'flash-red-bg');
+  shotgunEl.classList.remove('recoil-fire');
+  shotgunEl.classList.remove('flash-red-active');
 
-let isAdrenalineMode = false;
-let selectedAdrenalineIndex = -1;
+  void appEl.offsetWidth; // Reflow
 
-/* ================= 모션 / 이펙트 함수 ================= */
-function triggerEffect(isLive) {
-  const app = document.getElementById("app");
-  const shotgun = document.querySelector(".shotgun-icon");
+  appEl.classList.add('shake-heavy', 'flash-red-bg');
+  shotgunEl.classList.add('recoil-fire', 'flash-red-active');
 
-  if (shotgun) {
-    shotgun.classList.add("recoil");
-    setTimeout(() => shotgun.classList.remove("recoil"), 150);
-  }
-
-  if (isLive) {
-    app.classList.add("shake", "flash-red");
-    setTimeout(() => app.classList.remove("shake", "flash-red"), 300);
-  } else {
-    app.classList.add("flash-white");
-    setTimeout(() => app.classList.remove("flash-white"), 150);
-  }
+  setTimeout(() => {
+    appEl.classList.remove('shake-heavy', 'flash-red-bg');
+    shotgunEl.classList.remove('recoil-fire', 'flash-red-active');
+  }, 400);
 }
 
-function triggerItemEffect(item) {
-  const app = document.getElementById("app");
-  const shotgun = document.querySelector(".shotgun-icon");
+function triggerBlankShotEffect() {
+  appEl.classList.remove('flash-white-bg');
+  shotgunEl.classList.remove('recoil-blank');
 
-  let animationClass = "";
-  if (["CIGARETTE", "MEDICINE"].includes(item)) {
-    animationClass = "flash-item-green";
-  } else if (["BEER", "INVERTER"].includes(item)) {
-    animationClass = "flash-item-blue";
-  } else if (["MAGNIFIER", "PHONE"].includes(item)) {
-    animationClass = "flash-item-purple";
-  } else if (["HANDCUFFS"].includes(item)) {
-    animationClass = "flash-item-yellow";
-  } else if (item === "SAW") {
-    app.classList.add("shake");
-    setTimeout(() => app.classList.remove("shake"), 250);
-    if (shotgun) {
-      shotgun.classList.add("recoil");
-      setTimeout(() => shotgun.classList.remove("recoil"), 200);
-    }
-    return;
-  }
+  void appEl.offsetWidth;
 
-  if (animationClass) {
-    app.classList.add(animationClass);
-    setTimeout(() => app.classList.remove(animationClass), 300);
-  }
+  appEl.classList.add('flash-white-bg');
+  shotgunEl.classList.add('recoil-blank');
+
+  setTimeout(() => {
+    appEl.classList.remove('flash-white-bg');
+    shotgunEl.classList.remove('recoil-blank');
+  }, 200);
 }
 
-function showItemDesc(itemKey) {
-  document.getElementById("modal-title").innerText = ITEM_NAMES[itemKey];
-  document.getElementById("modal-desc").innerText = ITEM_DESCS[itemKey];
-  document.getElementById("item-modal").classList.remove("hidden");
+function triggerItemEffect(type) {
+  appEl.classList.remove('flash-heal', 'flash-poison', 'flash-saw', 'flash-yellow');
+  void appEl.offsetWidth;
+
+  if (type === 'heal') appEl.classList.add('flash-heal');
+  else if (type === 'poison') appEl.classList.add('flash-poison');
+  else if (type === 'saw') appEl.classList.add('flash-saw');
+  else appEl.classList.add('flash-yellow');
+
+  setTimeout(() => {
+    appEl.classList.remove('flash-heal', 'flash-poison', 'flash-saw', 'flash-yellow');
+  }, 400);
 }
 
-document.getElementById("modal-close")?.addEventListener("click", () => {
-  document.getElementById("item-modal").classList.add("hidden");
+function updateHpWithEffect(el, count) {
+  el.textContent = '❤️'.repeat(Math.max(0, count));
+  el.classList.add('hp-damage');
+  setTimeout(() => el.classList.remove('hp-damage'), 500);
+}
+
+// ====================================
+// 🎮 Game UI & Logic
+// ====================================
+
+btnJoin.addEventListener('click', () => {
+  const name = playerNameInput.value.trim() || '플레이어';
+  const room = roomCodeInput.value.trim() || 'default';
+  socket.emit('joinRoom', { name, room });
 });
 
-function bindLongTouchDesc(btnElement, itemKey) {
-  let timer = null;
-  btnElement.addEventListener("touchstart", () => {
-    timer = setTimeout(() => showItemDesc(itemKey), 500);
-  });
-  btnElement.addEventListener("touchend", () => clearTimeout(timer));
-  btnElement.addEventListener("touchmove", () => clearTimeout(timer));
-  btnElement.addEventListener("contextmenu", (e) => {
-    e.preventDefault();
-    showItemDesc(itemKey);
-  });
-}
-
-/* ================= 게임 상태 ================= */
-let isAiMode = false;
-let aiState = {
-  playerHp: 4, aiHp: 4, playerItems: [], aiItems: [],
-  bullets: [], turn: "player", sawActive: false, handcuffsActive: false, knownNextBullet: null
-};
-
-// 버튼 이벤트 연결
-document.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("btn-join")?.addEventListener("click", () => {
-    isAiMode = false;
-    const name = document.getElementById("player-name").value || "익명";
-    const roomCode = document.getElementById("room-code").value;
-    if (!roomCode) return alert("방 코드를 입력하세요.");
-    socket.emit("joinRoom", { name, roomCode });
-    document.getElementById("lobby-screen").classList.add("hidden");
-    document.getElementById("game-screen").classList.remove("hidden");
-  });
-
-  document.getElementById("btn-ai")?.addEventListener("click", () => {
-    isAiMode = true;
-    document.getElementById("lobby-screen").classList.add("hidden");
-    document.getElementById("game-screen").classList.remove("hidden");
-    startAiGame();
-  });
+btnAI.addEventListener('click', () => {
+  const name = playerNameInput.value.trim() || '플레이어';
+  socket.emit('startVsAI', { name });
 });
 
-/* ================= AI 모드 로직 ================= */
-function startAiGame() {
-  const name = document.getElementById("player-name").value || "플레이어";
-  document.getElementById("my-name").innerText = `${name} (나)`;
-  document.getElementById("opp-name").innerText = "딜러 (AI)";
-  aiState.playerHp = 4; aiState.aiHp = 4;
-  aiState.playerItems = []; aiState.aiItems = [];
-  aiState.turn = "player";
-  startAiRound("게임 시작! 새 탄환이 장전됩니다.");
-}
+socket.on('gameStart', (data) => {
+  lobbyScreen.classList.add('hidden');
+  gameScreen.classList.remove('hidden');
+  showModal('게임 시작', '목숨을 건 벅샷 룰렛에 오신 것을 환영합니다.');
+});
 
-function startAiRound(msg) {
-  const live = Math.floor(Math.random() * 3) + 2;
-  const blank = Math.floor(Math.random() * 3) + 2;
-  let bullets = [];
-  for (let i = 0; i < live; i++) bullets.push(true);
-  for (let i = 0; i < blank; i++) bullets.push(false);
-  bullets.sort(() => Math.random() - 0.5);
+socket.on('updateGameState', (state) => {
+  isMyTurn = state.turn === socket.id;
+  isOpponentHandcuffed = state.isOpponentHandcuffed || false;
 
-  aiState.bullets = bullets;
-  aiState.sawActive = false;
-  aiState.handcuffsActive = false;
-  aiState.knownNextBullet = null;
-  isAdrenalineMode = false;
+  updateHpWithEffect(myHpEl, state.myHp);
+  updateHpWithEffect(oppHpEl, state.oppHp);
 
-  const getRandomItem = () => ITEMS[Math.floor(Math.random() * ITEMS.length)];
-  aiState.playerItems = [...aiState.playerItems, getRandomItem(), getRandomItem()].slice(0, 8);
-  aiState.aiItems = [...aiState.aiItems, getRandomItem(), getRandomItem()].slice(0, 8);
+  myNameEl.textContent = state.myName;
+  oppNameEl.textContent = state.oppName;
 
-  updateAiUI(`${msg} (실탄 ${live}개, 공포탄 ${blank}개)`);
+  bulletInfoEl.textContent = `실탄: ${state.liveBullets} | 공포탄: ${state.blankBullets}`;
 
-  if (aiState.turn === "ai") {
-    setTimeout(playAiTurn, 1000);
-  }
-}
+  // 사격 버튼 활성화 제어
+  btnShootOpp.disabled = !isMyTurn;
+  btnShootSelf.disabled = !isMyTurn;
 
-function updateAiUI(logMsg) {
-  document.getElementById("my-hp").innerText = "❤️".repeat(aiState.playerHp);
-  document.getElementById("opp-hp").innerText = "❤️".repeat(aiState.aiHp);
+  statusTextEl.textContent = isMyTurn ? '🔥 당신의 턴입니다! 행동을 선택하세요.' : '⏳ 상대방의Turn 진행 중...';
 
-  const live = aiState.bullets.filter(b => b === true).length;
-  const blank = aiState.bullets.filter(b => b === false).length;
-  document.getElementById("bullet-info").innerText = `실탄: ${live} | 공포탄: ${blank}`;
-  document.getElementById("status-text").innerText = logMsg;
+  renderItems(state.myItems, state.oppItems);
+});
 
-  const isMyTurn = aiState.turn === "player";
-  document.getElementById("btn-shoot-opp").disabled = !isMyTurn;
-  document.getElementById("btn-shoot-self").disabled = !isMyTurn;
-
-  renderAiItems();
-
-  if (aiState.playerHp <= 0 || aiState.aiHp <= 0) {
-    alert(`게임 종료! ${aiState.playerHp > 0 ? "당신의 승리!" : "딜러(AI)의 승리!"}`);
-    location.reload();
-  }
-}
-
-function renderAiItems() {
-  const isMyTurn = aiState.turn === "player";
+function renderItems(myItems, oppItems) {
+  myItemsEl.innerHTML = '';
+  oppItemsEl.innerHTML = '';
 
   // 내 아이템
-  const myContainer = document.getElementById("my-items");
-  myContainer.innerHTML = "";
-  aiState.playerItems.forEach((item, index) => {
-    const btn = document.createElement("button");
-    btn.className = "item-btn";
-    btn.innerText = ITEM_NAMES[item];
-    bindLongTouchDesc(btn, item);
+  myItems.forEach((item, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'item-btn';
+    btn.textContent = ITEM_DATA[item]?.name || item;
 
-    if (isMyTurn) {
-      btn.onclick = () => {
-        if (item === "ADRENALINE") {
-          const hasStealable = aiState.aiItems.some(i => i !== "ADRENALINE");
-          if (!hasStealable) return alert("훔쳐올 수 있는 상대 아이템이 없습니다! (아드레날린 제외)");
-          
-          isAdrenalineMode = true;
-          selectedAdrenalineIndex = index;
-          triggerItemEffect("ADRENALINE");
-          updateAiUI("훔쳐올 상대 아이템을 클릭하세요!");
-        } else {
-          isAdrenalineMode = false;
-          usePlayerItemInAi(index);
-        }
-      };
+    // 수갑 중복 방지 규칙 고증 적용
+    if (!isMyTurn || (item === 'handcuffs' && isOpponentHandcuffed)) {
+      btn.disabled = true;
+    }
+
+    btn.addEventListener('click', () => useItem(item, idx));
+    myItemsEl.appendChild(btn);
+  });
+
+  // 상대 아이템 (아드레날린 강탈 모드용)
+  oppItems.forEach((item, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'item-btn';
+    btn.textContent = ITEM_DATA[item]?.name || item;
+
+    if (isStealingMode) {
+      btn.classList.add('stealable');
+      btn.addEventListener('click', () => stealItem(item, idx));
     } else {
       btn.disabled = true;
     }
-    myContainer.appendChild(btn);
-  });
-
-  // 상대 아이템
-  const oppContainer = document.getElementById("opp-items");
-  oppContainer.innerHTML = "";
-  aiState.aiItems.forEach((item, index) => {
-    const btn = document.createElement("button");
-    btn.className = "item-btn";
-    btn.innerText = ITEM_NAMES[item];
-    bindLongTouchDesc(btn, item);
-
-    if (isMyTurn && isAdrenalineMode) {
-      if (item === "ADRENALINE") {
-        btn.disabled = true;
-        btn.classList.remove("stealable");
-      } else {
-        btn.disabled = false;
-        btn.classList.add("stealable");
-        btn.onclick = () => {
-          const stolenItem = aiState.aiItems.splice(index, 1)[0];
-          aiState.playerItems.splice(selectedAdrenalineIndex, 1);
-          isAdrenalineMode = false;
-          executeItemEffect(stolenItem, true, `상대의 ${ITEM_NAMES[stolenItem]}을(를) 훔쳐 사용했습니다!`);
-        };
-      }
-    } else {
-      btn.disabled = true;
-      btn.classList.remove("stealable");
-    }
-    oppContainer.appendChild(btn);
+    oppItemsEl.appendChild(btn);
   });
 }
 
-function usePlayerItemInAi(index) {
-  const item = aiState.playerItems[index];
-  aiState.playerItems.splice(index, 1);
-  executeItemEffect(item, true, "");
-}
+function useItem(itemKey, index) {
+  if (!isMyTurn) return;
 
-function executeItemEffect(item, isPlayer, logPrefix) {
-  triggerItemEffect(item);
-  let log = logPrefix;
+  // 특수 연출 트리거
+  if (itemKey === 'cigarette') triggerItemEffect('heal');
+  else if (itemKey === 'saw') triggerItemEffect('saw');
+  else triggerItemEffect('yellow');
 
-  if (item === "MAGNIFIER") {
-    const next = aiState.bullets[aiState.bullets.length - 1] ? "실탄 🔴" : "공포탄 ⚪";
-    if (isPlayer) alert(`[돋보기] 다음 탄환은 ${next} 입니다!`);
-    log += " 돋보기를 사용했습니다.";
-  } else if (item === "CIGARETTE") {
-    if (isPlayer) aiState.playerHp = Math.min(4, aiState.playerHp + 1);
-    else aiState.aiHp = Math.min(4, aiState.aiHp + 1);
-    log += " 담배를 피워 체력을 1 회복했습니다.";
-  } else if (item === "SAW") {
-    aiState.sawActive = true;
-    log += " 톱으로 총열을 잘라 데미지를 2배로 만듭니다!";
-  } else if (item === "HANDCUFFS") {
-    aiState.handcuffsActive = true;
-    log += " 수갑을 채워 상대 턴을 넘깁니다!";
-  } else if (item === "BEER") {
-    const popped = aiState.bullets.pop();
-    log += ` 맥주를 마셔 탄환 하나를 배출했습니다! (${popped ? "실탄🔴" : "공포탄⚪"})`;
-  } else if (item === "INVERTER") {
-    if (aiState.bullets.length > 0) {
-      const idx = aiState.bullets.length - 1;
-      aiState.bullets[idx] = !aiState.bullets[idx];
-    }
-    log += " 변환기를 사용해 다음 탄환을 반대로 바꿨습니다!";
-  } else if (item === "MEDICINE") {
-    if (Math.random() < 0.4) {
-      if (isPlayer) aiState.playerHp = Math.min(4, aiState.playerHp + 2);
-      else aiState.aiHp = Math.min(4, aiState.aiHp + 2);
-      log += " 약을 먹고 체력을 2 회복했습니다!";
-    } else {
-      if (isPlayer) aiState.playerHp = Math.max(0, aiState.playerHp - 1);
-      else aiState.aiHp = Math.max(0, aiState.aiHp - 1);
-      log += " 약 부작용으로 체력 1을 잃었습니다...";
-    }
-  }
-
-  if (aiState.bullets.length === 0) startAiRound("탄환 소진!");
-  else updateAiUI(log);
-}
-
-function shootInAi(targetSelf) {
-  isAdrenalineMode = false;
-  const isLive = aiState.bullets.pop();
-  triggerEffect(isLive);
-
-  const damage = aiState.sawActive ? 2 : 1;
-  aiState.sawActive = false;
-  let keepTurn = false;
-  let log = "";
-
-  if (targetSelf) {
-    if (isLive) {
-      aiState.playerHp = Math.max(0, aiState.playerHp - damage);
-      log = `탕! 💥 실탄입니다! ${damage} 데미지를 입었습니다.`;
-    } else {
-      log = "찰칵! ⚪ 공포탄입니다! 턴 유지!";
-      keepTurn = true;
-    }
-  } else {
-    if (isLive) {
-      aiState.aiHp = Math.max(0, aiState.aiHp - damage);
-      log = `탕! 💥 딜러에게 실탄을 맞췄습니다! (${damage} 데미지)`;
-    } else {
-      log = "찰칵! ⚪ 공포탄이었습니다.";
-    }
-  }
-
-  aiState.knownNextBullet = null;
-
-  if (!keepTurn) {
-    if (aiState.handcuffsActive) {
-      log += " (수갑 효과로 턴 유지!)";
-      aiState.handcuffsActive = false;
-    } else {
-      aiState.turn = "ai";
-    }
-  }
-
-  if (aiState.bullets.length === 0 && aiState.playerHp > 0 && aiState.aiHp > 0) {
-    startAiRound(log);
-  } else {
-    updateAiUI(log);
-    if (aiState.turn === "ai" && aiState.playerHp > 0 && aiState.aiHp > 0) {
-      setTimeout(playAiTurn, 1200);
-    }
-  }
-}
-
-function playAiTurn() {
-  if (aiState.turn !== "ai" || aiState.playerHp <= 0 || aiState.aiHp <= 0) return;
-
-  if (aiState.bullets.length === 0) {
-    startAiRound("탄환 소진!");
+  if (itemKey === 'adrenaline') {
+    isStealingMode = true;
+    statusTextEl.textContent = '💉 훔칠 상대 아이템을 클릭하세요!';
+    socket.emit('useItem', { itemKey, index });
     return;
   }
 
-  const liveCount = aiState.bullets.filter(b => b === true).length;
-  const liveProb = liveCount / aiState.bullets.length;
-
-  if (aiState.aiHp <= 2 && useAiItem("CIGARETTE")) return;
-  if (aiState.knownNextBullet === null && useAiItem("MAGNIFIER")) {
-    aiState.knownNextBullet = aiState.bullets[aiState.bullets.length - 1];
-    triggerItemEffect("MAGNIFIER");
-    updateAiUI("딜러(AI)가 돋보기를 사용했습니다.");
-    setTimeout(playAiTurn, 1000);
-    return;
-  }
-
-  let targetSelf = aiState.knownNextBullet !== null ? !aiState.knownNextBullet : liveProb < 0.5;
-
-  const isLive = aiState.bullets.pop();
-  triggerEffect(isLive);
-
-  const damage = aiState.sawActive ? 2 : 1;
-  aiState.sawActive = false;
-  aiState.knownNextBullet = null;
-  let keepTurn = false;
-  let log = "";
-
-  if (targetSelf) {
-    if (isLive) {
-      aiState.aiHp = Math.max(0, aiState.aiHp - damage);
-      log = `탕! 💥 딜러(AI)가 자해 실탄을 맞았습니다! (${damage} 데미지)`;
-    } else {
-      log = "찰칵! ⚪ 딜러(AI) 공포탄! 턴 유지!";
-      keepTurn = true;
-    }
-  } else {
-    if (isLive) {
-      aiState.playerHp = Math.max(0, aiState.playerHp - damage);
-      log = `탕! 💥 딜러(AI)가 당신에게 실탄을 쐈습니다! (${damage} 데미지)`;
-    } else {
-      log = "찰칵! ⚪ 딜러(AI)가 쏜 총은 공포탄이었습니다.";
-    }
-  }
-
-  if (!keepTurn) {
-    if (aiState.handcuffsActive) {
-      log += " (수갑 효과로 딜러 턴 유지!)";
-      aiState.handcuffsActive = false;
-    } else {
-      aiState.turn = "player";
-    }
-  }
-
-  if (aiState.bullets.length === 0 && aiState.playerHp > 0 && aiState.aiHp > 0) {
-    startAiRound(log);
-  } else {
-    updateAiUI(log);
-    if (aiState.turn === "ai" && aiState.playerHp > 0 && aiState.aiHp > 0) {
-      setTimeout(playAiTurn, 1200);
-    }
-  }
+  socket.emit('useItem', { itemKey, index });
 }
 
-function useAiItem(itemName) {
-  const idx = aiState.aiItems.indexOf(itemName);
-  if (idx !== -1) {
-    aiState.aiItems.splice(idx, 1);
-    return true;
-  }
-  return false;
+function stealItem(itemKey, index) {
+  if (!isStealingMode) return;
+  isStealingMode = false;
+  socket.emit('stealItem', { itemKey, index });
 }
 
-/* ================= 멀티플레이 소켓 ================= */
-socket.on("updateState", (state) => {
-  if (isAiMode) return;
-  const myId = socket.id;
-  const oppId = Object.keys(state.players).find(id => id !== myId);
-  const me = state.players[myId];
-  const opp = oppId ? state.players[oppId] : null;
-
-  if (me) {
-    document.getElementById("my-name").innerText = `${me.name} (나)`;
-    document.getElementById("my-hp").innerText = "❤️".repeat(me.hp);
-  }
-
-  if (opp) {
-    document.getElementById("opp-name").innerText = opp.name;
-    document.getElementById("opp-hp").innerText = "❤️".repeat(opp.hp);
-  }
-
-  document.getElementById("status-text").innerText = state.logs;
-  document.getElementById("bullet-info").innerText = state.bulletInfo;
-
-  const isMyTurn = state.turn === myId;
-  document.getElementById("btn-shoot-opp").disabled = !isMyTurn;
-  document.getElementById("btn-shoot-self").disabled = !isMyTurn;
+// 사격 이벤트
+btnShootOpp.addEventListener('click', () => {
+  if (!isMyTurn) return;
+  socket.emit('shoot', { target: 'opponent' });
 });
 
-document.getElementById("btn-shoot-opp")?.addEventListener("click", () => {
-  if (isAiMode) shootInAi(false);
-  else socket.emit("shoot", { targetSelf: false });
+btnShootSelf.addEventListener('click', () => {
+  if (!isMyTurn) return;
+  socket.emit('shoot', { target: 'self' });
 });
 
-document.getElementById("btn-shoot-self")?.addEventListener("click", () => {
-  if (isAiMode) shootInAi(true);
-  else socket.emit("shoot", { targetSelf: true });
+// 결과 이벤트 수신
+socket.on('shotResult', (res) => {
+  if (res.isLive) {
+    triggerLiveShotEffect();
+    statusTextEl.textContent = `💥 탕! 실탄이 격발되었습니다! (${res.target === 'self' ? '자해' : '상대 피격'})`;
+  } else {
+    triggerBlankShotEffect();
+    statusTextEl.textContent = `⚙️ 딱! 공포탄이었습니다.`;
+  }
+});
+
+socket.on('itemResult', (res) => {
+  showModal(res.title || '아이템 사용', res.message);
+  if (res.effect === 'poison') triggerItemEffect('poison');
+  if (res.effect === 'heal') triggerItemEffect('heal');
+});
+
+// 모달 제어
+function showModal(title, text) {
+  modalTitle.textContent = title;
+  modalDesc.textContent = text;
+  itemModal.classList.remove('hidden');
+}
+
+modalClose.addEventListener('click', () => {
+  itemModal.classList.add('hidden');
 });
