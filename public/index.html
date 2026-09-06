@@ -2,140 +2,109 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>벅샷 룰렛 웹 (Buckshot Roulette)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Buckshot Roulette</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div id="app">
-    <!-- 로비 화면 -->
-    <div id="lobby-screen" class="card">
-      <div>
-        <h1 class="title">BUCKSHOT ROULETTE</h1>
-        <p class="subtitle">12게이지 산탄총으로 벌이는 목숨을 건 게임</p>
-        
+    <!-- 🏠 1. 로비 화면 -->
+    <div id="lobby-screen" class="screen">
+      <h1 class="title">BUCKSHOT<br>ROULETTE</h1>
+      <p class="subtitle">12게이지 산탄총으로 벌이는 목숨을 건 게임</p>
+
+      <div class="input-container">
         <div class="input-group">
           <label for="player-name">닉네임</label>
-          <input type="text" id="player-name" placeholder="닉네임을 입력하세요" maxlength="10">
+          <input type="text" id="player-name" placeholder="닉네임을 입력하세요" />
         </div>
 
         <div class="input-group">
           <label for="room-code">방 코드 (멀티플레이)</label>
-          <input type="text" id="room-code" placeholder="예: 1234" maxlength="6">
+          <input type="text" id="room-code" placeholder="예: 1234 (미입력시 공용방)" />
         </div>
       </div>
 
-      <div class="button-group">
-        <button id="btn-join" class="btn primary">방 입장 / 멀티 시작</button>
-        <button id="btn-ai" class="btn secondary">🤖 AI 딜러와 대결 (1인용)</button>
-      </div>
-    </div>
-
-    <!-- 게임 화면 -->
-    <div id="game-screen" class="card hidden">
-      <!-- 상대 정보 (상단) -->
-      <div class="player-panel opponent">
-        <div class="player-info">
-          <span id="opp-name" class="name">딜러 (AI)</span>
-          <div id="opp-hp" class="hp-bar">❤️❤️❤️❤️</div>
-        </div>
-        <div id="opp-items" class="items-container"></div>
-      </div>
-
-      <!-- 게임 진행 및 산탄총 연출 영역 -->
-      <div class="table-area">
-        <div id="bullet-info" class="bullet-info">실탄: ? | 공포탄: ?</div>
-        
-        <!-- 묵직한 12게이지 산탄총 SVG 그래픽 -->
-        <div class="shotgun-container">
-          <svg class="shotgun-icon" viewBox="0 0 320 120" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="metal-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#555566"/>
-                <stop offset="30%" stop-color="#2a2a35"/>
-                <stop offset="70%" stop-color="#15151c"/>
-                <stop offset="100%" stop-color="#0a0a0d"/>
-              </linearGradient>
-
-              <linearGradient id="barrel-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#888899"/>
-                <stop offset="15%" stop-color="#444455"/>
-                <stop offset="50%" stop-color="#1a1a22"/>
-                <stop offset="85%" stop-color="#333344"/>
-                <stop offset="100%" stop-color="#0d0d12"/>
-              </linearGradient>
-
-              <linearGradient id="wood-grad" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stop-color="#6e4727"/>
-                <stop offset="40%" stop-color="#4a2e18"/>
-                <stop offset="100%" stop-color="#241408"/>
-              </linearGradient>
-
-              <filter id="heavy-shadow" x="-20%" y="-20%" width="140%" height="140%">
-                <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity="0.9"/>
-              </filter>
-            </defs>
-
-            <g filter="url(#heavy-shadow)">
-              <path d="M 10 45 L 65 38 L 95 48 L 85 75 L 55 82 L 10 65 Z" fill="url(#wood-grad)" stroke="#110b05" stroke-width="2"/>
-              <path d="M 10 45 L 20 44 L 20 65 L 10 65 Z" fill="#111" />
-
-              <rect x="90" y="42" width="75" height="32" rx="3" fill="url(#metal-grad)" stroke="#000" stroke-width="2"/>
-              <rect x="110" y="47" width="28" height="12" rx="2" fill="#08080a" stroke="#333" stroke-width="1.5"/>
-              <circle cx="100" cy="64" r="2.5" fill="#666" stroke="#111" stroke-width="1"/>
-              <circle cx="150" cy="64" r="2" fill="#666" stroke="#111" stroke-width="1"/>
-
-              <path d="M 98 74 C 98 88, 120 88, 122 74" fill="none" stroke="#222" stroke-width="3.5"/>
-              <path d="M 108 74 Q 106 81 112 82" fill="none" stroke="#888" stroke-width="2.5"/>
-
-              <rect x="165" y="42" width="135" height="14" rx="1" fill="url(#barrel-grad)" stroke="#000" stroke-width="1.5"/>
-              <rect x="165" y="57" width="120" height="11" rx="1" fill="url(#barrel-grad)" stroke="#000" stroke-width="1.5"/>
-
-              <rect x="180" y="55" width="55" height="17" rx="3" fill="url(#wood-grad)" stroke="#150a03" stroke-width="1.5"/>
-              <line x1="190" y1="56" x2="190" y2="71" stroke="#1a0f07" stroke-width="2"/>
-              <line x1="197" y1="56" x2="197" y2="71" stroke="#1a0f07" stroke-width="2"/>
-              <line x1="204" y1="56" x2="204" y2="71" stroke="#1a0f07" stroke-width="2"/>
-              <line x1="211" y1="56" x2="211" y2="71" stroke="#1a0f07" stroke-width="2"/>
-              <line x1="218" y1="56" x2="218" y2="71" stroke="#1a0f07" stroke-width="2"/>
-              <line x1="225" y1="56" x2="225" y2="71" stroke="#1a0f07" stroke-width="2"/>
-
-              <polygon points="295,42 297,37 300,42" fill="#aaa" />
-              <rect x="300" y="41" width="4" height="16" fill="#111" />
-            </g>
-
-            <g class="muzzle-flash">
-              <polygon points="304,49 335,25 320,45 350,49 320,53 335,73 304,49" fill="#ffcc00" opacity="0.9"/>
-              <polygon points="304,49 325,33 315,46 338,49 315,52 325,65 304,49" fill="#ff3300" opacity="0.95"/>
-              <circle cx="308" cy="49" r="10" fill="#ffffff" />
-            </g>
-          </svg>
-        </div>
-
-        <div id="status-text" class="status-text">차례를 기다리는 중...</div>
-
-        <!-- 사격 액션 버튼 -->
-        <div class="action-buttons">
-          <button id="btn-shoot-opp" class="btn danger">상대에게 사격 🎯</button>
-          <button id="btn-shoot-self" class="btn warning">자신에게 사격 💥</button>
-        </div>
-      </div>
-
-      <!-- 내 정보 (하단) -->
-      <div class="player-panel self">
-        <div id="my-items" class="items-container"></div>
-        <div class="player-info">
-          <span id="my-name" class="name">플레이어 (나)</span>
-          <div id="my-hp" class="hp-bar">❤️❤️❤️❤️</div>
-        </div>
+      <div class="btn-group">
+        <button id="btn-join" class="btn-primary">🚪 방 입장 / 멀티 시작</button>
+        <button id="btn-ai" class="btn-secondary">🤖 AI 딜러와 대결 (1인용)</button>
       </div>
     </div>
 
-    <!-- 모달 피드백 -->
+    <!-- ⏳ 2. 멀티플레이 대기 화면 -->
+    <div id="waiting-screen" class="screen hidden" style="justify-content: center; align-items: center; text-align: center; gap: 20px;">
+      <h2 class="title" style="font-size: 2rem;">상대방을 기다리는 중...</h2>
+      <p id="waiting-info" class="subtitle">방 코드에서 상대 플레이어를 기다리고 있습니다.</p>
+      <div class="shotgun-icon" style="animation: pulseSteal 1.5s infinite alternate;">⏳</div>
+      <button id="btn-cancel-wait" class="btn-secondary" style="margin-top: 20px;">대기 취소 및 나가기</button>
+    </div>
+
+    <!-- 🎮 3. 게임 플레이 화면 -->
+    <div id="game-screen" class="screen hidden">
+      <!-- 상대방 영역 -->
+      <div class="player-area">
+        <div class="player-info">
+          <span id="opp-name">상대방</span>
+          <span id="opp-hp" class="hp-bar">❤️❤️❤️❤️</span>
+        </div>
+        <div id="opp-items" class="item-list"></div>
+      </div>
+
+      <!-- 중앙 산탄총 및 상태 영역 -->
+      <div class="center-area">
+        <div class="shotgun-icon">🔫</div>
+        <div id="bullet-info" class="bullet-info">실탄: 0 | 공포탄: 0</div>
+        <div id="status-text" class="status-text">게임을 불러오는 중...</div>
+      </div>
+
+      <!-- 내 영역 및 조작 버튼 -->
+      <div class="player-area">
+        <div class="player-info">
+          <span id="my-name">나</span>
+          <span id="my-hp" class="hp-bar">❤️❤️❤️❤️</span>
+        </div>
+        <div id="my-items" class="item-list"></div>
+      </div>
+
+      <div class="action-area">
+        <button id="btn-shoot-opp" class="btn-danger" disabled>🎯 상대에게 발사</button>
+        <button id="btn-shoot-self" class="btn-danger" disabled>🔄 자신에게 발사</button>
+      </div>
+    </div>
+
+    <!-- 🏆 4. 게임 결과 화면 (승리/패배) -->
+    <div id="result-screen" class="screen hidden" style="justify-content: center; align-items: center; text-align: center; gap: 24px;">
+      <h1 id="result-title" class="title" style="font-size: 2.8rem; color: #ff3333;">GAME OVER</h1>
+      <p id="result-desc" class="subtitle" style="font-size: 1.1rem;">승패가 결정되었습니다.</p>
+      <div class="btn-group" style="margin-top: 20px;">
+        <button id="btn-restart" class="btn-primary">🔄 로비로 돌아가기</button>
+      </div>
+    </div>
+
+    <!-- 📢 5. 라운드 / 턴 안내 배너 오버레이 (오류 방지용 추가) -->
+    <div id="announcement-overlay" class="modal hidden" style="background: rgba(0,0,0,0.7); pointer-events: none;">
+      <div style="background: rgba(15,15,15,0.95); border: 2px solid #ff1a1a; padding: 20px 40px; border-radius: 12px; box-shadow: 0 0 30px rgba(255,0,0,0.5);">
+        <h2 id="announcement-text" style="color: #fff; font-size: 1.5rem; text-align: center;">라운드 시작</h2>
+      </div>
+    </div>
+
+    <!-- 💬 6. 일반 알림 팝업 모달 -->
     <div id="item-modal" class="modal hidden">
       <div class="modal-content">
         <h3 id="modal-title">알림</h3>
         <p id="modal-desc">내용</p>
-        <button id="modal-close" class="btn primary">확인</button>
+        <button id="modal-close" class="btn-primary">확인</button>
+      </div>
+    </div>
+
+    <!-- 🔍 7. 아이템 선택/타겟 지정 모달 -->
+    <div id="action-modal" class="modal hidden">
+      <div class="modal-content">
+        <h3 id="action-modal-title">선택</h3>
+        <p id="action-modal-desc">대상을 선택하세요</p>
+        <div id="action-modal-buttons" class="btn-group">
+          <!-- 동적 버튼 생성 영역 -->
+        </div>
       </div>
     </div>
   </div>
