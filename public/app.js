@@ -19,7 +19,7 @@ const ITEM_DESCS = {
 
 const ITEMS = Object.keys(ITEM_NAMES);
 
-let isAdrenalineMode = false; // 아드레날린 선택 상태 플래그
+let isAdrenalineMode = false;
 let selectedAdrenalineIndex = -1;
 
 function triggerEffect(isLive) {
@@ -109,7 +109,7 @@ function startAiRound(msg) {
   aiState.bullets = bullets;
   aiState.sawActive = false;
   aiState.handcuffsActive = false;
-  aiState.knownNextBullet = null;
+  aiState.knownNextBullet = null; // AI 기억 리셋
   isAdrenalineMode = false;
 
   const getRandomItem = () => ITEMS[Math.floor(Math.random() * ITEMS.length)];
@@ -118,7 +118,10 @@ function startAiRound(msg) {
 
   updateAiUI(`${msg} (실탄 ${live}개, 공포탄 ${blank}개)`);
 
-  if (aiState.turn === "ai") setTimeout(playAiTurn, 1000);
+  // AI 턴이면 딜레이 후 실행
+  if (aiState.turn === "ai") {
+    setTimeout(playAiTurn, 1000);
+  }
 }
 
 function updateAiUI(logMsg) {
@@ -185,12 +188,9 @@ function renderAiItems() {
       btn.disabled = false;
       btn.classList.add("stealable");
       btn.onclick = () => {
-        // 아드레날린으로 상대 아이템 강탈 사용
         const stolenItem = aiState.aiItems.splice(index, 1)[0];
         aiState.playerItems.splice(selectedAdrenalineIndex, 1);
         isAdrenalineMode = false;
-        
-        // 강탈한 아이템 즉시 실행
         executeItemEffect(stolenItem, true, `상대의 ${ITEM_NAMES[stolenItem]}을(를) 훔쳐 사용했습니다!`);
       };
     } else {
@@ -276,7 +276,7 @@ function shootInAi(targetSelf) {
     }
   }
 
-  aiState.knownNextBullet = null;
+  aiState.knownNextBullet = null; // 총을 쏘면 무조건 파악 정보 초기화
 
   if (!keepTurn) {
     if (aiState.handcuffsActive) {
@@ -287,16 +287,26 @@ function shootInAi(targetSelf) {
     }
   }
 
+  // 남은 탄환이 없으면 새 라운드 시작
   if (aiState.bullets.length === 0 && aiState.playerHp > 0 && aiState.aiHp > 0) {
     startAiRound(log);
   } else {
     updateAiUI(log);
-    if (aiState.turn === "ai") setTimeout(playAiTurn, 1200);
+    // AI 턴일 때만 안전하게 AI 턴 호출
+    if (aiState.turn === "ai" && aiState.playerHp > 0 && aiState.aiHp > 0) {
+      setTimeout(playAiTurn, 1200);
+    }
   }
 }
 
 function playAiTurn() {
   if (aiState.turn !== "ai" || aiState.playerHp <= 0 || aiState.aiHp <= 0) return;
+
+  // 탄환이 비어있으면 안전하게 라운드 재시작
+  if (aiState.bullets.length === 0) {
+    startAiRound("탄환 소진!");
+    return;
+  }
 
   const liveCount = aiState.bullets.filter(b => b === true).length;
   const liveProb = liveCount / aiState.bullets.length;
@@ -331,70 +341,3 @@ function playAiTurn() {
   } else {
     if (isLive) {
       aiState.playerHp = Math.max(0, aiState.playerHp - damage);
-      log = `탕! 💥 딜러(AI)가 당신에게 실탄을 쐈습니다! (${damage} 데미지)`;
-    } else {
-      log = "찰칵! ⚪ 딜러(AI)가 쏜 총은 공포탄이었습니다.";
-    }
-  }
-
-  if (!keepTurn) {
-    if (aiState.handcuffsActive) {
-      log += " (수갑 효과로 딜러 턴 유지!)";
-      aiState.handcuffsActive = false;
-    } else {
-      aiState.turn = "player";
-    }
-  }
-
-  if (aiState.bullets.length === 0 && aiState.playerHp > 0 && aiState.aiHp > 0) {
-    startAiRound(log);
-  } else {
-    updateAiUI(log);
-    if (aiState.turn === "ai") setTimeout(playAiTurn, 1200);
-  }
-}
-
-function useAiItem(itemName) {
-  const idx = aiState.aiItems.indexOf(itemName);
-  if (idx !== -1) {
-    aiState.aiItems.splice(idx, 1);
-    return true;
-  }
-  return false;
-}
-
-/* ================= 멀티플레이 소켓 ================= */
-socket.on("updateState", (state) => {
-  if (isAiMode) return;
-  const myId = socket.id;
-  const oppId = Object.keys(state.players).find(id => id !== myId);
-  const me = state.players[myId];
-  const opp = oppId ? state.players[oppId] : null;
-
-  if (me) {
-    document.getElementById("my-name").innerText = `${me.name} (나)`;
-    document.getElementById("my-hp").innerText = "❤️".repeat(me.hp);
-  }
-
-  if (opp) {
-    document.getElementById("opp-name").innerText = opp.name;
-    document.getElementById("opp-hp").innerText = "❤️".repeat(opp.hp);
-  }
-
-  document.getElementById("status-text").innerText = state.logs;
-  document.getElementById("bullet-info").innerText = state.bulletInfo;
-
-  const isMyTurn = state.turn === myId;
-  document.getElementById("btn-shoot-opp").disabled = !isMyTurn;
-  document.getElementById("btn-shoot-self").disabled = !isMyTurn;
-});
-
-document.getElementById("btn-shoot-opp").addEventListener("click", () => {
-  if (isAiMode) shootInAi(false);
-  else socket.emit("shoot", { targetSelf: false });
-});
-
-document.getElementById("btn-shoot-self").addEventListener("click", () => {
-  if (isAiMode) shootInAi(true);
-  else socket.emit("shoot", { targetSelf: true });
-});
