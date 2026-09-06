@@ -241,3 +241,12 @@ function showModal(title, text) {
 modalClose.addEventListener('click', () => {
   itemModal.classList.add('hidden');
 });
+modalClose.addEventListener('click', () => {
+  itemModal.classList.add('hidden');
+  
+  // 승리/패배 모달이었을 경우 로비 화면으로 이동
+  if (modalTitle.textContent.includes('승리') || modalTitle.textContent.includes('패배')) {
+    gameScreen.classList.add('hidden');
+    lobbyScreen.classList.remove('hidden');
+  }
+});
