@@ -3,63 +3,82 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>벅샷 룰렛 웹 대전</title>
+  <title>BUCKSHOT ROULETTE WEB</title>
   <link rel="stylesheet" href="style.css">
   <script src="/socket.io/socket.io.js"></script>
 </head>
 <body>
   <div id="app">
+    <!-- CRT 모니터 스캔라인 효과 Overlay -->
+    <div class="crt-overlay"></div>
+
     <!-- 로비 화면 -->
     <div id="lobby-screen" class="screen">
-      <h1>BUCKSHOT ROULETTE</h1>
-      <p class="sub">RENDER MULTIPLAYER & AI WEB</p>
-      <input type="text" id="player-name" placeholder="닉네임 입력" maxlength="8">
-      <input type="text" id="room-code" placeholder="방 코드 (멀티용)" maxlength="4">
-      
-      <div class="action-group" style="width:85%; margin-top:10px;">
-        <button id="btn-join" style="flex:1;">멀티 시작</button>
-        <button id="btn-ai" class="warning" style="flex:1; background:#388e3c;">AI 대전</button>
+      <div class="logo-box">
+        <h1 class="glitch-title">BUCKSHOT</h1>
+        <h1 class="glitch-title red">ROULETTE</h1>
+        <div class="sub-tag">RENDER MULTIPLAYER & AI</div>
+      </div>
+
+      <div class="input-card">
+        <div class="input-field">
+          <label>NICKNAME</label>
+          <input type="text" id="player-name" placeholder="준귤님" maxlength="8">
+        </div>
+        <div class="input-field">
+          <label>ROOM CODE</label>
+          <input type="text" id="room-code" placeholder="4자리 입력" maxlength="4">
+        </div>
+        
+        <div class="btn-group">
+          <button id="btn-join" class="neon-btn">🌐 멀티 대전</button>
+          <button id="btn-ai" class="neon-btn green">🤖 AI 딜러전</button>
+        </div>
       </div>
     </div>
 
     <!-- 게임 화면 -->
     <div id="game-screen" class="screen hidden">
-      <!-- 상대방(또는 AI) 영역 -->
+      <!-- 상대방 영역 -->
       <div class="player-area opponent">
-        <div class="info">
-          <span id="opp-name">상대방</span>
+        <div class="info-bar">
+          <span id="opp-name" class="p-name">DEALER</span>
           <div id="opp-hp" class="hp-bar"></div>
         </div>
         <div id="opp-items" class="items-container"></div>
       </div>
 
-      <!-- 중앙 샷건 및 상태 표시 -->
+      <!-- 중앙 샷건 스테이지 -->
       <div class="center-stage">
-        <div id="status-text">상대방 접속 대기 중...</div>
-        <div id="bullet-info">실탄: ? | 공포탄: ?</div>
-        <div class="shotgun-icon">🔫</div>
+        <div class="status-box">
+          <div id="status-text">상대방 접속 대기 중...</div>
+        </div>
+        <div class="shotgun-wrapper">
+          <div class="shotgun-icon">🔫</div>
+        </div>
+        <div id="bullet-info" class="bullet-badge">실탄: ? | 공포탄: ?</div>
       </div>
 
-      <!-- 내 영역 및 조작 버튼 -->
+      <!-- 내 영역 및 컨트롤 -->
       <div class="player-area my-area">
         <div id="my-items" class="items-container"></div>
-        <div class="info">
-          <span id="my-name">나</span>
+        <div class="info-bar">
+          <span id="my-name" class="p-name">PLAYER</span>
           <div id="my-hp" class="hp-bar"></div>
         </div>
         <div class="action-group">
-          <button id="btn-shoot-opp" class="action-btn danger" disabled>상대 발사</button>
-          <button id="btn-shoot-self" class="action-btn warning" disabled>자신 발사</button>
+          <button id="btn-shoot-opp" class="action-btn danger" disabled>🎯 상대 사격</button>
+          <button id="btn-shoot-self" class="action-btn warning" disabled>💀 자신 사격</button>
         </div>
       </div>
     </div>
 
-    <!-- 아이템 설명 팝업 (모달) -->
+    <!-- 아이템 설명 팝업 -->
     <div id="item-modal" class="modal hidden">
       <div class="modal-content">
-        <h3 id="modal-title">아이템 이름</h3>
-        <p id="modal-desc">아이템 설명</p>
-        <button id="modal-close">닫기</button>
+        <h3 id="modal-title">아이템</h3>
+        <p id="modal-desc">설명</p>
+        <button id="modal-close" class="neon-btn small">확인</button>
       </div>
     </div>
   </div>
