@@ -13,7 +13,7 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  min-height: 100dvh; /* 모바일 동적 높이 대응 */
+  min-height: 100dvh;
   padding: 0;
   margin: 0;
 }
@@ -28,7 +28,7 @@ body {
   flex-direction: column;
   position: relative;
   box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
-  overflow-y: auto; /* 화면이 작으면 스크롤 가능하도록 설정 */
+  overflow-y: auto;
 }
 
 .card {
@@ -149,7 +149,7 @@ body {
   grid-template-columns: repeat(4, 1fr);
   gap: 5px;
   max-height: 85px;
-  overflow-y: auto; /* 아이템 많아지면 스크롤 생성 */
+  overflow-y: auto;
   background-color: #121216;
   padding: 6px;
   border-radius: 8px;
@@ -212,15 +212,11 @@ body {
   transition: transform 0.08s ease-in-out;
 }
 
-.shotgun-icon.recoil {
-  transform: translateX(-20px) rotate(-5deg) scale(1.03);
-}
-
 .muzzle-flash {
   display: none;
 }
 
-.flash-red .muzzle-flash {
+.flash-red-active .muzzle-flash {
   display: block;
 }
 
@@ -247,7 +243,7 @@ body {
   padding: 12px;
 }
 
-/* 모달 피드백 */
+/* 모달 */
 .modal {
   position: absolute;
   top: 0; left: 0; width: 100%; height: 100%;
@@ -270,38 +266,96 @@ body {
 .modal-content h3 { margin-bottom: 10px; color: #ff3b30; }
 .modal-content p { margin-bottom: 16px; font-size: 0.9rem; color: #ccc; line-height: 1.4; }
 
-/* 시각 이펙트 애니메이션 */
-.shake { animation: shakeAnim 0.25s; }
-@keyframes shakeAnim {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(-6px, 4px); }
-  50% { transform: translate(6px, -4px); }
-  75% { transform: translate(-4px, -2px); }
-  100% { transform: translate(0, 0); }
+/* ====================================
+   🔥 타격감 및 아이템 이펙트 애니메이션
+   ==================================== */
+
+/* 실탄 격발 화면 진동 */
+.shake-heavy {
+  animation: heavyShake 0.4s cubic-bezier(.36,.07,.19,.97) both;
 }
 
-.flash-red { animation: flashRedAnim 0.3s; }
+@keyframes heavyShake {
+  10%, 90% { transform: translate3d(-4px, 2px, 0) rotate(-1deg); }
+  20%, 80% { transform: translate3d(6px, -4px, 0) rotate(2deg); }
+  30%, 50%, 70% { transform: translate3d(-8px, 6px, 0) rotate(-2deg); }
+  40%, 60% { transform: translate3d(8px, -6px, 0) rotate(1deg); }
+}
+
+/* 실탄 산탄총 반동 */
+.recoil-fire {
+  animation: shotgunRecoil 0.35s ease-out;
+}
+
+@keyframes shotgunRecoil {
+  0% { transform: translateX(0) scale(1); }
+  15% { transform: translateX(-35px) rotate(-8deg) scale(1.08); }
+  100% { transform: translateX(0) scale(1); }
+}
+
+/* 공포탄 반동 */
+.recoil-blank {
+  animation: shotgunBlank 0.2s ease-out;
+}
+
+@keyframes shotgunBlank {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(5px); }
+  100% { transform: translateY(0); }
+}
+
+/* 실탄 화염 번쩍임 */
+.flash-red-bg { animation: flashRedAnim 0.35s; }
 @keyframes flashRedAnim {
   0% { background-color: #121217; }
-  50% { background-color: #5a0d0d; }
+  50% { background-color: #630d0d; }
   100% { background-color: #121217; }
 }
 
-.flash-white { animation: flashWhiteAnim 0.15s; }
+/* 공포탄 클릭 번쩍임 */
+.flash-white-bg { animation: flashWhiteAnim 0.15s; }
 @keyframes flashWhiteAnim {
   0% { background-color: #121217; }
-  50% { background-color: #3a3a4a; }
+  50% { background-color: #2e2e3d; }
   100% { background-color: #121217; }
 }
 
-.flash-item-green { animation: flashGreen 0.3s; }
-@keyframes flashGreen { 0% { background-color: #121217; } 50% { background-color: rgba(46, 255, 101, 0.2); } 100% { background-color: #121217; } }
+/* 체력 피격 효과 */
+.hp-damage {
+  animation: hpDamageAnim 0.5s ease;
+}
 
-.flash-item-blue { animation: flashBlue 0.3s; }
-@keyframes flashBlue { 0% { background-color: #121217; } 50% { background-color: rgba(0, 191, 255, 0.2); } 100% { background-color: #121217; } }
+@keyframes hpDamageAnim {
+  0% { color: #ff0000; transform: scale(1.3); }
+  50% { opacity: 0.3; }
+  100% { color: inherit; transform: scale(1); }
+}
 
-.flash-item-purple { animation: flashPurple 0.35s; }
-@keyframes flashPurple { 0% { background-color: #121217; } 50% { background-color: rgba(186, 85, 211, 0.25); } 100% { background-color: #121217; } }
+/* 아이템 연출 */
+.flash-heal { animation: flashHeal 0.4s ease; }
+@keyframes flashHeal {
+  0% { background-color: #121217; }
+  50% { background-color: rgba(46, 204, 113, 0.3); }
+  100% { background-color: #121217; }
+}
 
-.flash-item-yellow { animation: flashYellow 0.3s; }
-@keyframes flashYellow { 0% { background-color: #121217; } 50% { background-color: rgba(255, 235, 59, 0.2); } 100% { background-color: #121217; } }
+.flash-poison { animation: flashPoison 0.4s ease; }
+@keyframes flashPoison {
+  0% { background-color: #121217; }
+  50% { background-color: rgba(155, 89, 182, 0.4); }
+  100% { background-color: #121217; }
+}
+
+.flash-saw { animation: flashSaw 0.3s ease; }
+@keyframes flashSaw {
+  0% { background-color: #121217; }
+  50% { background-color: rgba(231, 76, 60, 0.3); }
+  100% { background-color: #121217; }
+}
+
+.flash-yellow { animation: flashYellow 0.3s ease; }
+@keyframes flashYellow {
+  0% { background-color: #121217; }
+  50% { background-color: rgba(241, 196, 15, 0.3); }
+  100% { background-color: #121217; }
+}
