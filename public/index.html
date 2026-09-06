@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>벅샷 룰렛 웹 (Buckshot Roulette)</title>
   <link rel="stylesheet" href="style.css">
 </head>
@@ -10,17 +10,19 @@
   <div id="app">
     <!-- 로비 화면 -->
     <div id="lobby-screen" class="card">
-      <h1 class="title">BUCKSHOT ROULETTE</h1>
-      <p class="subtitle">12게이지 산탄총으로 벌이는 목숨을 건 게임</p>
-      
-      <div class="input-group">
-        <label for="player-name">닉네임</label>
-        <input type="text" id="player-name" placeholder="닉네임을 입력하세요" maxlength="10">
-      </div>
+      <div>
+        <h1 class="title">BUCKSHOT ROULETTE</h1>
+        <p class="subtitle">12게이지 산탄총으로 벌이는 목숨을 건 게임</p>
+        
+        <div class="input-group">
+          <label for="player-name">닉네임</label>
+          <input type="text" id="player-name" placeholder="닉네임을 입력하세요" maxlength="10">
+        </div>
 
-      <div class="input-group">
-        <label for="room-code">방 코드 (멀티플레이)</label>
-        <input type="text" id="room-code" placeholder="예: 1234" maxlength="6">
+        <div class="input-group">
+          <label for="room-code">방 코드 (멀티플레이)</label>
+          <input type="text" id="room-code" placeholder="예: 1234" maxlength="6">
+        </div>
       </div>
 
       <div class="button-group">
@@ -75,25 +77,20 @@
             </defs>
 
             <g filter="url(#heavy-shadow)">
-              <!-- 개머리판 -->
               <path d="M 10 45 L 65 38 L 95 48 L 85 75 L 55 82 L 10 65 Z" fill="url(#wood-grad)" stroke="#110b05" stroke-width="2"/>
               <path d="M 10 45 L 20 44 L 20 65 L 10 65 Z" fill="#111" />
 
-              <!-- 리시버 / 몸통 -->
               <rect x="90" y="42" width="75" height="32" rx="3" fill="url(#metal-grad)" stroke="#000" stroke-width="2"/>
               <rect x="110" y="47" width="28" height="12" rx="2" fill="#08080a" stroke="#333" stroke-width="1.5"/>
               <circle cx="100" cy="64" r="2.5" fill="#666" stroke="#111" stroke-width="1"/>
               <circle cx="150" cy="64" r="2" fill="#666" stroke="#111" stroke-width="1"/>
 
-              <!-- 방아쇠 울 & 방아쇠 -->
               <path d="M 98 74 C 98 88, 120 88, 122 74" fill="none" stroke="#222" stroke-width="3.5"/>
               <path d="M 108 74 Q 106 81 112 82" fill="none" stroke="#888" stroke-width="2.5"/>
 
-              <!-- 산탄 총열 및 튜브 탄창 -->
               <rect x="165" y="42" width="135" height="14" rx="1" fill="url(#barrel-grad)" stroke="#000" stroke-width="1.5"/>
               <rect x="165" y="57" width="120" height="11" rx="1" fill="url(#barrel-grad)" stroke="#000" stroke-width="1.5"/>
 
-              <!-- 장전 손잡이 (펌프) -->
               <rect x="180" y="55" width="55" height="17" rx="3" fill="url(#wood-grad)" stroke="#150a03" stroke-width="1.5"/>
               <line x1="190" y1="56" x2="190" y2="71" stroke="#1a0f07" stroke-width="2"/>
               <line x1="197" y1="56" x2="197" y2="71" stroke="#1a0f07" stroke-width="2"/>
@@ -102,12 +99,10 @@
               <line x1="218" y1="56" x2="218" y2="71" stroke="#1a0f07" stroke-width="2"/>
               <line x1="225" y1="56" x2="225" y2="71" stroke="#1a0f07" stroke-width="2"/>
 
-              <!-- 가늠쇠 & 총구 -->
               <polygon points="295,42 297,37 300,42" fill="#aaa" />
               <rect x="300" y="41" width="4" height="16" fill="#111" />
             </g>
 
-            <!-- 발사 화염 이펙트 -->
             <g class="muzzle-flash">
               <polygon points="304,49 335,25 320,45 350,49 320,53 335,73 304,49" fill="#ffcc00" opacity="0.9"/>
               <polygon points="304,49 325,33 315,46 338,49 315,52 325,65 304,49" fill="#ff3300" opacity="0.95"/>
@@ -135,7 +130,7 @@
       </div>
     </div>
 
-    <!-- 아이템 설명 팝업 모달 -->
+    <!-- 아이템 모달 -->
     <div id="item-modal" class="modal hidden">
       <div class="modal-content">
         <h3 id="modal-title">아이템 이름</h3>
