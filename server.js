@@ -34,12 +34,18 @@ function generateBullets() {
   return { bullets, liveCount: live, blankCount: blank };
 }
 
-function checkAndReloadBullets(game) {
+// 🔄 재장전 검사 및 전송
+function checkAndReloadBullets(game, roomId) {
   if (game.bullets.length === 0) {
     const newBullets = generateBullets();
     game.bullets = newBullets.bullets;
     game.liveCount = newBullets.liveCount;
     game.blankCount = newBullets.blankCount;
+
+    io.to(roomId).emit('reloadBullets', {
+      liveBullets: game.liveCount,
+      blankBullets: game.blankCount
+    });
     return true;
   }
   return false;
@@ -223,7 +229,7 @@ io.on('connection', (socket) => {
       }
     }
 
-    checkAndReloadBullets(game);
+    checkAndReloadBullets(game, roomId);
     sendGameState(roomId);
 
     if (game.isAI && game.turn === 'ai_dealer') {
@@ -267,7 +273,7 @@ io.on('connection', (socket) => {
       game.turn = socket.id;
     }
 
-    checkAndReloadBullets(game);
+    checkAndReloadBullets(game, roomId);
     sendGameState(roomId);
   }
 
@@ -280,7 +286,7 @@ io.on('connection', (socket) => {
     user.items.splice(index, 1);
 
     executeItemEffect(socket, game, itemKey);
-    checkAndReloadBullets(game);
+    checkAndReloadBullets(game, roomId);
     sendGameState(roomId);
   });
 
@@ -298,7 +304,7 @@ io.on('connection', (socket) => {
       socket.emit('itemResult', { title: '💉 아드레날린', message: `상대의 [ ${itemKey} ] 아이템을 훔쳐 사용했습니다!` });
     }
 
-    checkAndReloadBullets(game);
+    checkAndReloadBullets(game, roomId);
     sendGameState(roomId);
   });
 
