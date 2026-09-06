@@ -70,21 +70,24 @@ let aiState = {
   bullets: [], turn: "player", sawActive: false, handcuffsActive: false, knownNextBullet: null
 };
 
-document.getElementById("btn-join").addEventListener("click", () => {
-  isAiMode = false;
-  const name = document.getElementById("player-name").value || "익명";
-  const roomCode = document.getElementById("room-code").value;
-  if (!roomCode) return alert("방 코드를 입력하세요.");
-  socket.emit("joinRoom", { name, roomCode });
-  document.getElementById("lobby-screen").classList.add("hidden");
-  document.getElementById("game-screen").classList.remove("hidden");
-});
+// 버튼 이벤트 연결 (안전 리스너 적용)
+document.addEventListener("DOMContentLoaded", () => {
+  document.getElementById("btn-join")?.addEventListener("click", () => {
+    isAiMode = false;
+    const name = document.getElementById("player-name").value || "익명";
+    const roomCode = document.getElementById("room-code").value;
+    if (!roomCode) return alert("방 코드를 입력하세요.");
+    socket.emit("joinRoom", { name, roomCode });
+    document.getElementById("lobby-screen").classList.add("hidden");
+    document.getElementById("game-screen").classList.remove("hidden");
+  });
 
-document.getElementById("btn-ai").addEventListener("click", () => {
-  isAiMode = true;
-  document.getElementById("lobby-screen").classList.add("hidden");
-  document.getElementById("game-screen").classList.remove("hidden");
-  startAiGame();
+  document.getElementById("btn-ai")?.addEventListener("click", () => {
+    isAiMode = true;
+    document.getElementById("lobby-screen").classList.add("hidden");
+    document.getElementById("game-screen").classList.remove("hidden");
+    startAiGame();
+  });
 });
 
 /* ================= AI 모드 ================= */
@@ -109,7 +112,7 @@ function startAiRound(msg) {
   aiState.bullets = bullets;
   aiState.sawActive = false;
   aiState.handcuffsActive = false;
-  aiState.knownNextBullet = null; // AI 기억 리셋
+  aiState.knownNextBullet = null;
   isAdrenalineMode = false;
 
   const getRandomItem = () => ITEMS[Math.floor(Math.random() * ITEMS.length)];
@@ -118,7 +121,6 @@ function startAiRound(msg) {
 
   updateAiUI(`${msg} (실탄 ${live}개, 공포탄 ${blank}개)`);
 
-  // AI 턴이면 딜레이 후 실행
   if (aiState.turn === "ai") {
     setTimeout(playAiTurn, 1000);
   }
@@ -130,7 +132,7 @@ function updateAiUI(logMsg) {
 
   const live = aiState.bullets.filter(b => b === true).length;
   const blank = aiState.bullets.filter(b => b === false).length;
-  document.getElementById("bullet-info").innerText = `남은 실탄: ${live} | 공포탄: ${blank}`;
+  document.getElementById("bullet-info").innerText = `실탄: ${live} | 공포탄: ${blank}`;
   document.getElementById("status-text").innerText = logMsg;
 
   const isMyTurn = aiState.turn === "player";
@@ -148,7 +150,6 @@ function updateAiUI(logMsg) {
 function renderAiItems() {
   const isMyTurn = aiState.turn === "player";
 
-  // 내 아이템
   const myContainer = document.getElementById("my-items");
   myContainer.innerHTML = "";
   aiState.playerItems.forEach((item, index) => {
@@ -175,7 +176,6 @@ function renderAiItems() {
     myContainer.appendChild(btn);
   });
 
-  // 상대(AI) 아이템
   const oppContainer = document.getElementById("opp-items");
   oppContainer.innerHTML = "";
   aiState.aiItems.forEach((item, index) => {
@@ -276,7 +276,7 @@ function shootInAi(targetSelf) {
     }
   }
 
-  aiState.knownNextBullet = null; // 총을 쏘면 무조건 파악 정보 초기화
+  aiState.knownNextBullet = null;
 
   if (!keepTurn) {
     if (aiState.handcuffsActive) {
@@ -287,12 +287,10 @@ function shootInAi(targetSelf) {
     }
   }
 
-  // 남은 탄환이 없으면 새 라운드 시작
   if (aiState.bullets.length === 0 && aiState.playerHp > 0 && aiState.aiHp > 0) {
     startAiRound(log);
   } else {
     updateAiUI(log);
-    // AI 턴일 때만 안전하게 AI 턴 호출
     if (aiState.turn === "ai" && aiState.playerHp > 0 && aiState.aiHp > 0) {
       setTimeout(playAiTurn, 1200);
     }
@@ -302,7 +300,6 @@ function shootInAi(targetSelf) {
 function playAiTurn() {
   if (aiState.turn !== "ai" || aiState.playerHp <= 0 || aiState.aiHp <= 0) return;
 
-  // 탄환이 비어있으면 안전하게 라운드 재시작
   if (aiState.bullets.length === 0) {
     startAiRound("탄환 소진!");
     return;
@@ -341,3 +338,72 @@ function playAiTurn() {
   } else {
     if (isLive) {
       aiState.playerHp = Math.max(0, aiState.playerHp - damage);
+      log = `탕! 💥 딜러(AI)가 당신에게 실탄을 쐈습니다! (${damage} 데미지)`;
+    } else {
+      log = "찰칵! ⚪ 딜러(AI)가 쏜 총은 공포탄이었습니다.";
+    }
+  }
+
+  if (!keepTurn) {
+    if (aiState.handcuffsActive) {
+      log += " (수갑 효과로 딜러 턴 유지!)";
+      aiState.handcuffsActive = false;
+    } else {
+      aiState.turn = "player";
+    }
+  }
+
+  if (aiState.bullets.length === 0 && aiState.playerHp > 0 && aiState.aiHp > 0) {
+    startAiRound(log);
+  } else {
+    updateAiUI(log);
+    if (aiState.turn === "ai" && aiState.playerHp > 0 && aiState.aiHp > 0) {
+      setTimeout(playAiTurn, 1200);
+    }
+  }
+}
+
+function useAiItem(itemName) {
+  const idx = aiState.aiItems.indexOf(itemName);
+  if (idx !== -1) {
+    aiState.aiItems.splice(idx, 1);
+    return true;
+  }
+  return false;
+}
+
+/* ================= 멀티플레이 소켓 ================= */
+socket.on("updateState", (state) => {
+  if (isAiMode) return;
+  const myId = socket.id;
+  const oppId = Object.keys(state.players).find(id => id !== myId);
+  const me = state.players[myId];
+  const opp = oppId ? state.players[oppId] : null;
+
+  if (me) {
+    document.getElementById("my-name").innerText = `${me.name} (나)`;
+    document.getElementById("my-hp").innerText = "❤️".repeat(me.hp);
+  }
+
+  if (opp) {
+    document.getElementById("opp-name").innerText = opp.name;
+    document.getElementById("opp-hp").innerText = "❤️".repeat(opp.hp);
+  }
+
+  document.getElementById("status-text").innerText = state.logs;
+  document.getElementById("bullet-info").innerText = state.bulletInfo;
+
+  const isMyTurn = state.turn === myId;
+  document.getElementById("btn-shoot-opp").disabled = !isMyTurn;
+  document.getElementById("btn-shoot-self").disabled = !isMyTurn;
+});
+
+document.getElementById("btn-shoot-opp")?.addEventListener("click", () => {
+  if (isAiMode) shootInAi(false);
+  else socket.emit("shoot", { targetSelf: false });
+});
+
+document.getElementById("btn-shoot-self")?.addEventListener("click", () => {
+  if (isAiMode) shootInAi(true);
+  else socket.emit("shoot", { targetSelf: true });
+});
