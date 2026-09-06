@@ -1,6 +1,17 @@
 const socket = io();
 
-const ITEM_NAMES = { MAGNIFIER: "🔍돋보기", CIGARETTE: "🚬담배", SAW: "🪚톱", HANDCUFFS: "🔗수갑" };
+// 9종 아이템 명칭 대응표
+const ITEM_NAMES = { 
+  MAGNIFIER: "🔍돋보기", 
+  CIGARETTE: "🚬담배", 
+  SAW: "🪚톱", 
+  HANDCUFFS: "🔗수갑",
+  BEER: "🍺맥주",
+  PHONE: "📞전화기",
+  INVERTER: "🔄변환기",
+  ADRENALINE: "💉아드레날린",
+  MEDICINE: "💊만료된약"
+};
 
 document.getElementById("btn-join").addEventListener("click", () => {
   const name = document.getElementById("player-name").value || "익명";
@@ -22,13 +33,13 @@ socket.on("updateState", (state) => {
   if (me) {
     document.getElementById("my-name").innerText = `${me.name} (나)`;
     document.getElementById("my-hp").innerText = "❤️".repeat(me.hp);
-    renderItems("my-items", me.items, state.turn === myId);
+    renderMyItems(me.items, state.turn === myId);
   }
 
   if (opp) {
     document.getElementById("opp-name").innerText = opp.name;
     document.getElementById("opp-hp").innerText = "❤️".repeat(opp.hp);
-    renderItems("opp-items", opp.items, false);
+    renderOppItems(opp.items, state.turn === myId);
   }
 
   document.getElementById("status-text").innerText = state.logs;
@@ -48,15 +59,55 @@ socket.on("errorMsg", (msg) => {
   location.reload();
 });
 
-function renderItems(elementId, items, isMyTurn) {
-  const container = document.getElementById(elementId);
+// 내 아이템 렌더링
+function renderMyItems(items, isMyTurn) {
+  const container = document.getElementById("my-items");
   container.innerHTML = "";
   items.forEach((item, index) => {
     const btn = document.createElement("button");
     btn.className = "item-btn";
     btn.innerText = ITEM_NAMES[item];
-    if (elementId === "my-items" && isMyTurn) {
-      btn.onclick = () => socket.emit("useItem", index);
+    if (isMyTurn) {
+      btn.onclick = () => {
+        if (item === "ADRENALINE") {
+          alert("훔쳐올 상대방의 아이템 버튼을 클릭하세요!");
+        } else {
+          socket.emit("useItem", { itemIndex: index });
+        }
+      };
+    } else {
+      btn.disabled = true;
+    }
+    container.appendChild(btn);
+  });
+}
+
+// 상대 아이템 렌더링 (아드레날린 사용 클릭 지원)
+function renderOppItems(items, isMyTurn) {
+  const container = document.getElementById("opp-items");
+  container.innerHTML = "";
+  items.forEach((item, index) => {
+    const btn = document.createElement("button");
+    btn.className = "item-btn";
+    btn.innerText = ITEM_NAMES[item];
+    
+    // 내 턴일 때 상대 아이템 클릭 시 아드레날린 강탈 실행
+    if (isMyTurn) {
+      btn.onclick = () => {
+        const myItemNodes = document.getElementById("my-items").children;
+        // 내 아이템 중 아드레날린 인덱스 찾기
+        let adrIndex = -1;
+        for (let i = 0; i < myItemNodes.length; i++) {
+          if (myItemNodes[i].innerText === ITEM_NAMES["ADRENALINE"]) {
+            adrIndex = i;
+            break;
+          }
+        }
+
+        if (adrIndex !== -1) {
+          socket.emit("useItem", { itemIndex: adrIndex, targetItemIndex: index });
+        }
+      };
     } else {
       btn.disabled = true;
     }
