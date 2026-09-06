@@ -9,15 +9,22 @@
 </head>
 <body>
   <div id="app">
+    <!-- 로비 화면 -->
     <div id="lobby-screen" class="screen">
       <h1>BUCKSHOT ROULETTE</h1>
-      <p class="sub">RENDER MULTIPLAYER WEB</p>
+      <p class="sub">RENDER MULTIPLAYER & AI WEB</p>
       <input type="text" id="player-name" placeholder="닉네임 입력" maxlength="8">
-      <input type="text" id="room-code" placeholder="방 코드 (예: 1234)" maxlength="4">
-      <button id="btn-join">게임을 시작하기</button>
+      <input type="text" id="room-code" placeholder="방 코드 (멀티용)" maxlength="4">
+      
+      <div class="action-group" style="width:85%; margin-top:10px;">
+        <button id="btn-join" style="flex:1;">멀티 시작</button>
+        <button id="btn-ai" class="warning" style="flex:1; background:#388e3c;">AI 대전</button>
+      </div>
     </div>
 
+    <!-- 게임 화면 -->
     <div id="game-screen" class="screen hidden">
+      <!-- 상대방(또는 AI) 영역 -->
       <div class="player-area opponent">
         <div class="info">
           <span id="opp-name">상대방</span>
@@ -26,12 +33,14 @@
         <div id="opp-items" class="items-container"></div>
       </div>
 
+      <!-- 중앙 샷건 및 상태 표시 -->
       <div class="center-stage">
         <div id="status-text">상대방 접속 대기 중...</div>
         <div id="bullet-info">실탄: ? | 공포탄: ?</div>
         <div class="shotgun-icon">🔫</div>
       </div>
 
+      <!-- 내 영역 및 조작 버튼 -->
       <div class="player-area my-area">
         <div id="my-items" class="items-container"></div>
         <div class="info">
