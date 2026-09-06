@@ -14,14 +14,14 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 100vh;
+  height: 100dvh;
   overflow: hidden;
 }
 
 #app {
   width: 100%;
   max-width: 480px;
-  height: 100vh;
+  height: 100dvh;
   max-height: 850px;
   background: linear-gradient(180deg, #121212 0%, #090909 100%);
   border: 1px solid #222;
@@ -84,20 +84,22 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 20px 16px;
+  padding: 12px 14px;
   justify-content: space-between;
+  height: 100%;
+  overflow: hidden;
 }
 
 #lobby-screen {
   justify-content: center;
   align-items: center;
   text-align: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .title {
   font-family: 'Black Ops One', 'Noto Sans KR', sans-serif;
-  font-size: 2.6rem;
+  font-size: 2.4rem;
   font-weight: 400;
   color: #ff1a1a;
   text-shadow: 0 0 15px rgba(255, 0, 0, 0.6), 2px 2px 0px #400;
@@ -106,9 +108,9 @@ body {
 }
 
 .subtitle {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   color: #aaa;
-  margin-top: -12px;
+  margin-top: -10px;
   letter-spacing: -0.5px;
 }
 
@@ -116,7 +118,7 @@ body {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   align-items: stretch;
 }
 
@@ -125,11 +127,11 @@ body {
   display: flex;
   flex-direction: column;
   text-align: left;
-  gap: 6px;
+  gap: 4px;
 }
 
 .input-group label {
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #ff4d4d;
   padding-left: 4px;
@@ -138,13 +140,13 @@ body {
 
 input {
   width: 100%;
-  padding: 14px 16px;
+  padding: 12px 14px;
   background: #1a1a1a;
   border: 1px solid #333;
   border-bottom: 2px solid #555;
   color: #fff;
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   outline: none;
   transition: all 0.3s;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.6);
@@ -160,16 +162,16 @@ input:focus {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 10px;
+  gap: 10px;
+  margin-top: 6px;
 }
 
 .btn-primary, .btn-secondary {
   width: 100%;
-  padding: 16px;
+  padding: 14px;
   border: none;
   border-radius: 8px;
-  font-size: 1.05rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
@@ -200,21 +202,21 @@ input:focus {
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
 }
 
-/* 🎮 게임 플레이 스크린 (정밀 대칭 구조) */
+/* 🎮 게임 플레이 스크린 (잘림 방지 압축 구조) */
 #game-screen {
   justify-content: space-between;
-  padding: 16px;
+  padding: 10px 12px;
 }
 
 .player-area {
   background: rgba(22, 22, 22, 0.9);
   border: 1px solid #333;
-  border-radius: 10px;
-  padding: 12px 14px;
+  border-radius: 8px;
+  padding: 8px 12px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+  gap: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
 }
 
 .player-info {
@@ -222,35 +224,35 @@ input:focus {
   justify-content: space-between;
   align-items: center;
   font-weight: 700;
-  font-size: 1rem;
+  font-size: 0.95rem;
   border-bottom: 1px solid #2a2a2a;
-  padding-bottom: 6px;
+  padding-bottom: 4px;
   color: #bbb;
 }
 
-.hp-bar { font-size: 1.1rem; filter: drop-shadow(0 0 4px rgba(255,0,0,0.6)); }
+.hp-bar { font-size: 1rem; filter: drop-shadow(0 0 4px rgba(255,0,0,0.6)); }
 .hp-damage { animation: hpPulse 0.5s ease-in-out; }
 @keyframes hpPulse { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
 
 .item-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  min-height: 36px;
+  gap: 4px;
+  min-height: 30px;
   align-items: center;
 }
 
 .item-btn {
   background: linear-gradient(145deg, #2a2a2a, #1a1a1a);
   border: 1px solid #444;
-  border-bottom: 3px solid #111;
+  border-bottom: 2px solid #111;
   color: #fff;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 0.8rem;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
   font-weight: 700;
   cursor: pointer;
-  box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+  box-shadow: 1px 1px 3px rgba(0,0,0,0.4);
 }
 
 .item-btn:disabled {
@@ -263,35 +265,35 @@ input:focus {
   border-color: #ffaa00;
   animation: pulseSteal 1s infinite alternate;
 }
-@keyframes pulseSteal { 0% { box-shadow: 0 0 5px #ffaa00; } 100% { box-shadow: 0 0 15px #ffcc00; } }
+@keyframes pulseSteal { 0% { box-shadow: 0 0 5px #ffaa00; } 100% { box-shadow: 0 0 12px #ffcc00; } }
 
 .center-area {
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin: 4px 0;
+  gap: 6px;
+  margin: 2px 0;
 }
 
 .shotgun-icon {
-  font-size: 3.5rem;
-  filter: drop-shadow(0 6px 6px rgba(0,0,0,0.8));
+  font-size: 2.8rem;
+  filter: drop-shadow(0 4px 4px rgba(0,0,0,0.8));
 }
 
 .bullet-info {
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 900;
   color: #ffcc00;
   background: rgba(0,0,0,0.75);
-  padding: 5px 14px;
-  border-radius: 16px;
+  padding: 4px 12px;
+  border-radius: 14px;
   border: 1px solid #554400;
   letter-spacing: 0.5px;
 }
 
 .status-text {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #ddd;
   text-align: center;
@@ -300,22 +302,22 @@ input:focus {
 
 .action-area {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
 }
 
 .btn-danger {
   flex: 1;
-  padding: 14px 10px;
+  padding: 12px 8px;
   background: linear-gradient(145deg, #8b0000, #400000);
   color: #fff;
   border: 1px solid #ff3333;
-  border-bottom: 4px solid #200000;
+  border-bottom: 3px solid #200000;
   border-radius: 8px;
   font-weight: 900;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
@@ -348,12 +350,12 @@ input:focus {
   background: linear-gradient(145deg, #222, #111);
   border: 1px solid #555;
   border-radius: 12px;
-  padding: 24px;
+  padding: 20px;
   width: 100%;
-  max-width: 360px;
+  max-width: 340px;
   text-align: center;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 12px;
   box-shadow: 0 15px 30px rgba(0,0,0,0.8);
 }
