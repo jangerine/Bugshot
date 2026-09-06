@@ -79,12 +79,13 @@ body {
 .recoil-blank { animation: recoilB 0.2s ease-out; }
 @keyframes recoilB { 0% { transform: translateY(10px); } 100% { transform: translateY(0); } }
 
-/* 🏠 대칭 정렬된 로비 스크린 */
+/* 🏠 공통 스크린 레이아웃 */
 .screen {
   flex: 1;
   display: flex;
   flex-direction: column;
-  padding: 30px 24px;
+  padding: 20px 16px;
+  justify-content: space-between;
 }
 
 #lobby-screen {
@@ -199,16 +200,21 @@ input:focus {
   box-shadow: 0 6px 15px rgba(0, 0, 0, 0.6);
 }
 
-/* 🎮 게임 스크린 */
-.player-area {
-  background: rgba(25, 25, 25, 0.8);
-  border: 1px solid #333;
-  border-radius: 12px;
+/* 🎮 게임 플레이 스크린 (정밀 대칭 구조) */
+#game-screen {
+  justify-content: space-between;
   padding: 16px;
+}
+
+.player-area {
+  background: rgba(22, 22, 22, 0.9);
+  border: 1px solid #333;
+  border-radius: 10px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+  gap: 8px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.6);
 }
 
 .player-info {
@@ -216,20 +222,22 @@ input:focus {
   justify-content: space-between;
   align-items: center;
   font-weight: 700;
-  font-size: 1.05rem;
-  border-bottom: 1px solid #333;
-  padding-bottom: 8px;
+  font-size: 1rem;
+  border-bottom: 1px solid #2a2a2a;
+  padding-bottom: 6px;
+  color: #bbb;
 }
 
-.hp-bar { font-size: 1.2rem; filter: drop-shadow(0 0 4px rgba(255,0,0,0.6)); }
+.hp-bar { font-size: 1.1rem; filter: drop-shadow(0 0 4px rgba(255,0,0,0.6)); }
 .hp-damage { animation: hpPulse 0.5s ease-in-out; }
 @keyframes hpPulse { 0% { transform: scale(1.4); } 100% { transform: scale(1); } }
 
 .item-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  min-height: 40px;
+  gap: 6px;
+  min-height: 36px;
+  align-items: center;
 }
 
 .item-btn {
@@ -237,9 +245,9 @@ input:focus {
   border: 1px solid #444;
   border-bottom: 3px solid #111;
   color: #fff;
-  padding: 6px 12px;
+  padding: 6px 10px;
   border-radius: 6px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
   box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
@@ -258,61 +266,72 @@ input:focus {
 @keyframes pulseSteal { 0% { box-shadow: 0 0 5px #ffaa00; } 100% { box-shadow: 0 0 15px #ffcc00; } }
 
 .center-area {
-  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  gap: 12px;
-  margin: 12px 0;
+  gap: 8px;
+  margin: 4px 0;
 }
 
 .shotgun-icon {
-  font-size: 4.5rem;
-  filter: drop-shadow(0 8px 8px rgba(0,0,0,0.8));
+  font-size: 3.5rem;
+  filter: drop-shadow(0 6px 6px rgba(0,0,0,0.8));
 }
 
 .bullet-info {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 900;
   color: #ffcc00;
-  background: rgba(0,0,0,0.7);
-  padding: 6px 16px;
-  border-radius: 20px;
+  background: rgba(0,0,0,0.75);
+  padding: 5px 14px;
+  border-radius: 16px;
   border: 1px solid #554400;
+  letter-spacing: 0.5px;
 }
 
 .status-text {
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   font-weight: 700;
-  color: #ccc;
+  color: #ddd;
   text-align: center;
   text-shadow: 0 2px 4px rgba(0,0,0,0.8);
 }
 
 .action-area {
   display: flex;
-  gap: 12px;
-  margin-top: auto;
+  gap: 10px;
+  width: 100%;
 }
 
 .btn-danger {
   flex: 1;
-  padding: 16px;
+  padding: 14px 10px;
   background: linear-gradient(145deg, #8b0000, #400000);
   color: #fff;
   border: 1px solid #ff3333;
   border-bottom: 4px solid #200000;
   border-radius: 8px;
   font-weight: 900;
-  font-size: 1.05rem;
+  font-size: 0.95rem;
   cursor: pointer;
   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
-.btn-danger:disabled { opacity: 0.3; cursor: not-allowed; background: #222; border-color: #444; }
+.btn-danger:disabled { 
+  opacity: 0.3; 
+  cursor: not-allowed; 
+  background: #222; 
+  border-color: #444; 
+  border-bottom-width: 1px;
+}
 
-/* 모달 */
+/* 모달 스타일 */
 .modal {
   position: absolute;
   top: 0; left: 0; right: 0; bottom: 0;
