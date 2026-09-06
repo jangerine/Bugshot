@@ -1,94 +1,159 @@
-* { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+/* 기본 스타일 초기화 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  user-select: none;
+}
 
 body {
-  background-color: #0d0d0d;
-  color: #e0e0e0;
-  font-family: 'Courier New', Courier, monospace;
+  background-color: #121212;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   display: flex;
   justify-content: center;
   align-items: center;
-  /* 모바일 동적 뷰포트 높이 적용 */
   min-height: 100vh;
-  min-height: 100dvh; 
-  background: #0d0d0d;
+  overflow: hidden;
 }
 
 #app {
   width: 100%;
   max-width: 420px;
-  /* 고정 height 제거 및 min-height 적용 */
-  min-height: 100vh;
-  min-height: 100dvh; 
+  height: 100vh;
+  max-height: 800px;
   background-color: #1a1a1a;
+  border: 1px solid #333;
   display: flex;
   flex-direction: column;
+  position: relative;
+  box-shadow: 0 0 20px rgba(0,0,0,0.8);
 }
 
+/* 화면 전환 */
 .screen {
-  padding: 16px;
-  min-height: 100vh;
-  min-height: 100dvh;
+  flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: space-between; /* 요소들을 상/중/하로 고르게 분배 */
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+  gap: 15px;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* 로비 화면 */
+#lobby-screen h1 {
+  font-size: 24px;
+  color: #ff3333;
+  margin-bottom: 5px;
+  letter-spacing: 2px;
+}
+
+#lobby-screen .sub {
+  font-size: 12px;
+  color: #888;
+  margin-bottom: 20px;
+}
+
+input {
+  width: 85%;
+  padding: 12px;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+}
+
+input:focus {
+  outline: none;
+  border-color: #ff3333;
+}
+
+button {
+  padding: 12px 20px;
+  background: #d32f2f;
+  border: none;
+  border-radius: 6px;
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+button:active {
+  opacity: 0.8;
+}
+
+button:disabled {
+  background: #444 !important;
+  color: #888 !important;
+  cursor: not-allowed;
+}
+
+/* 게임 화면 영역 */
+.player-area {
+  width: 100%;
+  padding: 15px;
+  background: #222;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.player-area.opponent {
+  border-bottom: 2px solid #333;
+}
+
+.player-area.my-area {
+  border-top: 2px solid #333;
+  margin-top: auto;
+}
+
+.info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-weight: bold;
+}
+
+.hp-bar {
+  font-size: 18px;
+  letter-spacing: 2px;
+}
+
+/* 중앙 무대 */
+.center-stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 10px;
+  gap: 8px;
+}
+
+#status-text {
+  font-size: 14px;
+  color: #ffcc00;
+  min-height: 40px;
+  display: flex;
   align-items: center;
 }
 
-.hidden { display: none !important; }
-
-/* 로비 */
-h1 { color: #ff3333; text-shadow: 0 0 10px #ff0000; text-align: center; font-size: 24px; }
-.sub { font-size: 11px; color: #888; margin-bottom: 20px; }
-input { width: 85%; padding: 12px; margin: 6px 0; background: #2a2a2a; border: 1px solid #444; color: #fff; text-align: center; border-radius: 4px; }
-#btn-join { width: 85%; padding: 12px; background: #333; border: 1px solid #666; color: #fff; font-weight: bold; cursor: pointer; border-radius: 4px; margin-top: 10px; }
-
-/* 게임 화면 */
-#game-screen {
-  box-sizing: border-box;
-  padding-bottom: 24px; /* 하단 유격 확보 */
+#bullet-info {
+  font-size: 12px;
+  color: #aaa;
 }
 
-.player-area {
-  width: 100%;
-  padding: 10px 12px;
-  background: #222;
-  border-radius: 8px;
-}
-
-.info { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
-.hp-bar { color: #ff4444; font-size: 16px; letter-spacing: 2px; }
-
-.items-container {
-  display: flex;
-  flex-wrap: wrap; /* 아이템이 많아져도 깨지지 않게 줄바꿈 */
-  gap: 6px;
-  margin: 6px 0;
-  min-height: 32px;
-}
-
-.item-btn {
-  padding: 6px 8px;
-  background: #333;
-  border: 1px solid #555;
-  color: #ffcc00;
-  font-size: 11px;
-  border-radius: 4px;
-  width: auto;
-}
-
-.center-stage { text-align: center; margin: 10px 0; }
-#status-text { font-size: 14px; color: #ffeb3b; min-height: 36px; font-weight: bold; display: flex; align-items: center; justify-content: center; }
-#bullet-info { font-size: 12px; color: #aaa; margin-top: 2px; }
-.shotgun-icon { font-size: 38px; margin-top: 4px; }
-
-.action-group { display: flex; gap: 8px; margin-top: 8px; }
-.action-btn { flex: 1; font-size: 13px; padding: 12px 6px; border: none; border-radius: 4px; font-weight: bold; }
-.danger { background: #8b0000; color: #fff; }
-.warning { background: #a76800; color: #fff; }
-.action-btn:disabled { background: #333; color: #666; }
-/* ================= 모션 및 효과 ================= */
-
-/* 샷건 아이콘 기본 트랜지션 */
 .shotgun-icon {
   font-size: 38px;
   margin-top: 4px;
@@ -96,7 +161,87 @@ input { width: 85%; padding: 12px; margin: 6px 0; background: #2a2a2a; border: 1
   display: inline-block;
 }
 
-/* 화면 흔들림 (강한 실탄 피격) */
+/* 아이템 목록 컨테이너 */
+.items-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 42px;
+}
+
+.item-btn {
+  padding: 6px 10px;
+  font-size: 11px;
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+}
+
+/* 하단 액션 버튼 그룹 */
+.action-group {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.action-btn {
+  flex: 1;
+  padding: 14px;
+  font-size: 15px;
+}
+
+.action-btn.danger { background: #b71c1c; }
+.action-btn.warning { background: #e65100; }
+
+/* ================= 아이템 설명 팝업 (모달) ================= */
+.modal {
+  position: fixed;
+  top: 0; 
+  left: 0; 
+  width: 100%; 
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex; 
+  justify-content: center; 
+  align-items: center;
+  z-index: 100;
+}
+
+.modal-content {
+  background: #222;
+  border: 1px solid #ff3333;
+  padding: 20px;
+  border-radius: 8px;
+  width: 80%;
+  max-width: 300px;
+  text-align: center;
+  box-shadow: 0 0 15px rgba(255, 0, 0, 0.4);
+}
+
+#modal-title { 
+  color: #ffcc00; 
+  margin-bottom: 10px; 
+  font-size: 18px; 
+}
+
+#modal-desc { 
+  color: #e0e0e0; 
+  font-size: 13px; 
+  line-height: 1.5; 
+  margin-bottom: 15px; 
+}
+
+#modal-close {
+  background: #444; 
+  border: 1px solid #666; 
+  color: #fff;
+  padding: 8px 16px; 
+  border-radius: 4px; 
+  font-weight: bold; 
+  cursor: pointer;
+}
+
+/* ================= 모션 및 효과 ================= */
 .shake {
   animation: shakeAnim 0.3s ease-in-out;
 }
@@ -110,7 +255,6 @@ input { width: 85%; padding: 12px; margin: 6px 0; background: #2a2a2a; border: 1
   100% { transform: translate(0, 0); }
 }
 
-/* 화면 반짝임 (공포탄/실탄 플래시) */
 .flash-red {
   animation: flashRedAnim 0.2s ease-in-out;
 }
@@ -131,7 +275,6 @@ input { width: 85%; padding: 12px; margin: 6px 0; background: #2a2a2a; border: 1
   100% { background-color: #1a1a1a; }
 }
 
-/* 총기 반동 애니메이션 */
 .recoil {
   transform: translateY(-15px) scale(1.2) rotate(-10deg);
 }
