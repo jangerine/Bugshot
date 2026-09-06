@@ -41,7 +41,6 @@ function triggerEffect(isLive) {
   }
 }
 
-// 아이템 사용 시 모션 연출
 function triggerItemEffect(item) {
   const app = document.getElementById("app");
   const shotgun = document.querySelector(".shotgun-icon");
@@ -121,7 +120,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 });
 
-/* ================= AI 모드 ================= */
+/* ================= AI 모드 로직 ================= */
 function startAiGame() {
   const name = document.getElementById("player-name").value || "플레이어";
   document.getElementById("my-name").innerText = `${name} (나)`;
@@ -249,7 +248,7 @@ function usePlayerItemInAi(index) {
 }
 
 function executeItemEffect(item, isPlayer, logPrefix) {
-  triggerItemEffect(item); // 모션 애니메이션 트리거
+  triggerItemEffect(item);
   let log = logPrefix;
 
   if (item === "MAGNIFIER") {
