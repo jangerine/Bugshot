@@ -223,3 +223,24 @@ input:focus {
 .flash-white { animation: flashW 0.15s; }
 @keyframes flashW { 0% { background-color: #050505; } 50% { background-color: #333; } 100% { background-color: #050505; } }
 .recoil { transform: translateY(-12px) scale(1.15) rotate(-5deg); }
+/* 아이템 연출용 애니메이션 효과들 */
+.flash-item-green { animation: flashGreen 0.3s; }
+@keyframes flashGreen { 0% { background-color: #050505; } 50% { background-color: rgba(46, 255, 101, 0.25); } 100% { background-color: #050505; } }
+
+.flash-item-blue { animation: flashBlue 0.3s; }
+@keyframes flashBlue { 0% { background-color: #050505; } 50% { background-color: rgba(0, 191, 255, 0.25); } 100% { background-color: #050505; } }
+
+.flash-item-purple { animation: flashPurple 0.35s; }
+@keyframes flashPurple { 0% { background-color: #050505; } 50% { background-color: rgba(186, 85, 211, 0.3); } 100% { background-color: #050505; } }
+
+.flash-item-yellow { animation: flashYellow 0.3s; }
+@keyframes flashYellow { 0% { background-color: #050505; } 50% { background-color: rgba(255, 235, 59, 0.25); } 100% { background-color: #050505; } }
+
+.item-used-pop {
+  animation: itemPop 0.35s ease-out;
+}
+@keyframes itemPop {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.3) rotate(-3deg); filter: brightness(1.8); }
+  100% { transform: scale(1); }
+}
