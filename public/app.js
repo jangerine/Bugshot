@@ -22,6 +22,7 @@ const ITEMS = Object.keys(ITEM_NAMES);
 let isAdrenalineMode = false;
 let selectedAdrenalineIndex = -1;
 
+/* ================= 모션 / 이펙트 함수 ================= */
 function triggerEffect(isLive) {
   const app = document.getElementById("app");
   const shotgun = document.querySelector(".shotgun-icon");
@@ -37,6 +38,36 @@ function triggerEffect(isLive) {
   } else {
     app.classList.add("flash-white");
     setTimeout(() => app.classList.remove("flash-white"), 150);
+  }
+}
+
+// 아이템 사용 시 모션 연출
+function triggerItemEffect(item) {
+  const app = document.getElementById("app");
+  const shotgun = document.querySelector(".shotgun-icon");
+
+  let animationClass = "";
+  if (["CIGARETTE", "MEDICINE"].includes(item)) {
+    animationClass = "flash-item-green";
+  } else if (["BEER", "INVERTER"].includes(item)) {
+    animationClass = "flash-item-blue";
+  } else if (["MAGNIFIER", "PHONE"].includes(item)) {
+    animationClass = "flash-item-purple";
+  } else if (["HANDCUFFS"].includes(item)) {
+    animationClass = "flash-item-yellow";
+  } else if (item === "SAW") {
+    app.classList.add("shake");
+    setTimeout(() => app.classList.remove("shake"), 250);
+    if (shotgun) {
+      shotgun.classList.add("recoil");
+      setTimeout(() => shotgun.classList.remove("recoil"), 200);
+    }
+    return;
+  }
+
+  if (animationClass) {
+    app.classList.add(animationClass);
+    setTimeout(() => app.classList.remove(animationClass), 300);
   }
 }
 
@@ -167,6 +198,7 @@ function renderAiItems() {
           
           isAdrenalineMode = true;
           selectedAdrenalineIndex = index;
+          triggerItemEffect("ADRENALINE");
           updateAiUI("훔쳐올 상대 아이템을 클릭하세요!");
         } else {
           isAdrenalineMode = false;
@@ -217,6 +249,7 @@ function usePlayerItemInAi(index) {
 }
 
 function executeItemEffect(item, isPlayer, logPrefix) {
+  triggerItemEffect(item); // 모션 애니메이션 트리거
   let log = logPrefix;
 
   if (item === "MAGNIFIER") {
@@ -320,6 +353,7 @@ function playAiTurn() {
   if (aiState.aiHp <= 2 && useAiItem("CIGARETTE")) return;
   if (aiState.knownNextBullet === null && useAiItem("MAGNIFIER")) {
     aiState.knownNextBullet = aiState.bullets[aiState.bullets.length - 1];
+    triggerItemEffect("MAGNIFIER");
     updateAiUI("딜러(AI)가 돋보기를 사용했습니다.");
     setTimeout(playAiTurn, 1000);
     return;
